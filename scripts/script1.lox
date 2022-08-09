@@ -1,0 +1,37 @@
+print "Should print 3, 12:";
+print 1 + 2;
+print 3 * 4;
+
+var breakfast = "beignets";
+var beverage = "cafe au lait";
+breakfast = breakfast + " with " + beverage;
+
+print "Should print 'beignets with cafe au lait':";
+print breakfast;
+
+var a=1;
+var b=2;
+
+print "Should print 3:";
+print a+b;
+
+{
+  var a=1;
+  {
+    var b=2;
+    {
+      var c=3;
+      {
+        var d=4;
+      }
+      var e=5;
+    }
+  }
+  var f=6;
+  {
+    var g=7;
+  }
+}
+
+print "Should print 'nope':";
+if (3 < 1) print "yep"; else print "nope";

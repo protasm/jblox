@@ -1,0 +1,18 @@
+print "Should print 'A':";
+
+class A {
+  method() { print "A"; }
+}
+
+class B < A {
+  method() {
+    var closure = super.method;
+
+    closure(); // Prints "A".
+  }
+}
+
+
+var b = B();
+
+b.method();

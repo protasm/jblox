@@ -1,0 +1,17 @@
+print "This program should print 'assigned' even though the closure";
+print "assigns to x and the surrounding function accesses it.";
+print "If it prints 'before' instead, something went wrong.";
+
+fun outer() {
+  var x = "before";
+
+  fun inner() {
+    x = "assigned";
+  }
+
+  inner();
+
+  print x;
+}
+
+outer();

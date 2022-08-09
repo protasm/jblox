@@ -1,0 +1,21 @@
+print "Should print '3' twice:";
+
+var globalOne;
+var globalTwo;
+
+fun main() {
+  for (var a = 1; a <= 2; a = a + 1) {
+    fun closure() { print a; }
+
+    if (globalOne == nil) {
+      globalOne = closure;
+    } else {
+      globalTwo = closure;
+    }
+  } //for
+} //main
+
+main();
+
+globalOne();
+globalTwo();

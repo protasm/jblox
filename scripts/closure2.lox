@@ -1,0 +1,13 @@
+print "Should print 1:";
+
+fun outer() {
+  var x = 1;
+
+  fun inner() {
+    print x;
+  }
+
+  inner();
+}
+
+outer();

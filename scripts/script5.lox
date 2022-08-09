@@ -1,0 +1,22 @@
+print "Should print 11:";
+
+var a = 0;
+
+{
+  var b = 11;
+
+  {
+    var c = 21;
+
+    {
+      var d = 31;
+    }
+
+    var e = 22;
+  }
+
+  var f = 12;
+  var g = b + a;
+
+  print g;
+}

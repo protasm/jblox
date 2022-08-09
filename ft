@@ -1,0 +1,3 @@
+#!/bin/bash
+
+jblox ~/jblox/scripts/fib.lox

@@ -1,0 +1,24 @@
+fun outer() {
+  var a = "penguin";
+  var x = "flamingo";
+
+  fun middle() {
+    fun inner() {
+      a = "aardvark";
+      print x;
+    }
+
+    print "return from middle";
+
+    return inner;
+  }
+
+  print "return from outer";
+
+  return middle;
+}
+
+var mid = outer();
+var in = mid();
+
+in();

@@ -1,0 +1,30 @@
+var before = clock();
+
+766;
+
+print 119;
+
+15 + 21;
+
+print 45 + 123;
+
+14 * (5 + 4) - 1;
+
+{ var a = 99; { var a = 88; print a; } print a; }
+
+if (true and false) print "Yes."; else { print "No."; }
+
+var n = 5;
+
+while (n > 0) { print n; n = n - 1; }
+
+for (var a = 9; a > 0; a = a - 1) print a;
+
+fun foo(n) { return n + 1; }
+
+print foo(99);
+
+print "Before:";
+print before;
+print "After:";
+print clock();

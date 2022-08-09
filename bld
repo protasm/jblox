@@ -1,0 +1,4 @@
+#!/bin/bash
+
+find /home/ubuntu/jblox -name "*.java" > /home/ubuntu/jblox/sources.txt
+javac -g @/home/ubuntu/jblox/sources.txt
