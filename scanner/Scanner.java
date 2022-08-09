@@ -5,13 +5,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jblox.Defaults;
+import jblox.Props;
 import jblox.debug.Debugger;
 
 import static jblox.scanner.TokenType.*;
 
 public class Scanner {
-  private Defaults defaults;
+  private Props properties;
   private Debugger debugger;
   private static final Map<String, TokenType> keywords;
   private List<Token> tokens;
@@ -46,13 +46,13 @@ public class Scanner {
   }
 
   //Scanner()
-  public Scanner(Defaults defaults, Debugger debugger) {
-    this.defaults = defaults;
+  public Scanner(Props properties, Debugger debugger) {
+    this.properties = properties;
     this.debugger = debugger;
 
-    debugMaster = defaults.getBool("DEBUG_MASTER");
-    debugPrintProgress = debugMaster && defaults.getBool("DEBUG_PRINT_PROGRESS");
-    debugPrintSource = debugMaster && defaults.getBool("DEBUG_PRINT_SOURCE");
+    debugMaster = properties.getBool("DEBUG_MASTER");
+    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
+    debugPrintSource = debugMaster && properties.getBool("DEBUG_PRINT_SOURCE");
 
     if (debugPrintProgress) debugger.printProgress("Initializing scanner....");
   }

@@ -1,6 +1,6 @@
 package jblox.vm;
 
-import jblox.Defaults;
+import jblox.Props;
 import jblox.compiler.Chunk;
 import jblox.compiler.Compiler;
 import jblox.compiler.Function;
@@ -32,7 +32,7 @@ public class VM {
     OPERATION_LT,
   }
 
-  private Defaults defaults;
+  private Props properties;
   private Debugger debugger;
   private Compiler compiler;
   private LoxMap globals;
@@ -45,20 +45,20 @@ public class VM {
   private Upvalue openUpvalues; //linked list
 
   //VM()
-  public VM(Defaults defaults, Debugger debugger) {
-    this.defaults = defaults;
+  public VM(Props properties, Debugger debugger) {
+    this.properties = properties;
     this.debugger = debugger;
 
-    debugMaster = defaults.getBool("DEBUG_MASTER");
-    debugPrintProgress = debugMaster && defaults.getBool("DEBUG_PRINT_PROGRESS");
-    debugTraceExecution = debugMaster && defaults.getBool("DEBUG_TRACE_EXECUTION");
+    debugMaster = properties.getBool("DEBUG_MASTER");
+    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
+    debugTraceExecution = debugMaster && properties.getBool("DEBUG_TRACE_EXECUTION");
 
     if (debugPrintProgress) debugger.printProgress("Initializing VM....");
 
-    compiler = new Compiler(defaults, debugger);
+    compiler = new Compiler(properties, debugger);
     globals = new LoxMap();
-    stack = new LoxStack(defaults.getInt("MAX_STACK"));
-    frames = new LoxStack(defaults.getInt("MAX_FRAMES"));
+    stack = new LoxStack(properties.getInt("MAX_STACK"));
+    frames = new LoxStack(properties.getInt("MAX_FRAMES"));
     initString = "init";
 
     defineNativeFn("clock", new NativeClock());
@@ -117,7 +117,7 @@ public class VM {
     //CallFrame window on VM stack begins at slot
     //occupied by function.
     int base = stack.top() - argCount;
-    int maxFrames = defaults.getInt("MAX_FRAMES");
+    int maxFrames = properties.getInt("MAX_FRAMES");
 
     if (frames.count() == maxFrames) {
       runtimeError("Stack overflow.");

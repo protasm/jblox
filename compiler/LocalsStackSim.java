@@ -1,6 +1,6 @@
 package jblox.compiler;
 
-import jblox.Defaults;
+import jblox.Props;
 import jblox.scanner.Token;
 import jblox.util.LoxStack;
 
@@ -21,25 +21,25 @@ public class LocalsStackSim {
   private Upvalue[] upvalues;
   private int scopeDepth;
 
-  //LocalsStackSim(Defaults, LocalsStackSim, LocalsStackSim.FunctionType)
+  //LocalsStackSim(Props, LocalsStackSim, LocalsStackSim.FunctionType)
   public LocalsStackSim(
-    Defaults defaults, LocalsStackSim enclosing,
+    Props properties, LocalsStackSim enclosing,
     LocalsStackSim.FunctionType type
   ) {
-    this(defaults, enclosing, type, null);
+    this(properties, enclosing, type, null);
   }
 
-  //LocalsStackSim(Defaults, LocalsStackSim, LocalsStackSim.FunctionType, String)
+  //LocalsStackSim(Props, LocalsStackSim, LocalsStackSim.FunctionType, String)
   public LocalsStackSim(
-    Defaults defaults, LocalsStackSim enclosing,
+    Props properties, LocalsStackSim enclosing,
     LocalsStackSim.FunctionType type, String functionName
   ) {
     this.enclosing = enclosing;
     this.type = type;
 
     function = new Function(functionName);
-    locals = new LoxStack(defaults.getInt("MAX_LOCALS"));
-    upvalues = new Upvalue[defaults.getInt("MAX_STACK")];
+    locals = new LoxStack(properties.getInt("MAX_LOCALS"));
+    upvalues = new Upvalue[properties.getInt("MAX_STACK")];
     scopeDepth = 0;
 
     //Block out stack slot zero for the function being called.

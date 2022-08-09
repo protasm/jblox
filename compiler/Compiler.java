@@ -3,7 +3,7 @@ package jblox.compiler;
 import java.util.HashMap;
 import java.util.Map;
 
-import jblox.Defaults;
+import jblox.Props;
 import jblox.debug.Debugger;
 import jblox.parser.ParseRule;
 import jblox.parser.Parser;
@@ -18,7 +18,7 @@ import static jblox.parser.Parser.Precedence.*;
 import static jblox.scanner.TokenType.*;
 
 public class Compiler {
-  private Defaults defaults;
+  private Props properties;
   private Debugger debugger;
   private Scanner scanner;
   private Map<TokenType, ParseRule> typeToRule;
@@ -30,17 +30,17 @@ public class Compiler {
   private boolean debugPrintCode;
 
   //Compiler
-  public Compiler(Defaults defaults, Debugger debugger) {
-    this.defaults = defaults;
+  public Compiler(Props properties, Debugger debugger) {
+    this.properties = properties;
     this.debugger = debugger;
 
-    debugMaster = defaults.getBool("DEBUG_MASTER");
-    debugPrintProgress = debugMaster && defaults.getBool("DEBUG_PRINT_PROGRESS");
-    debugPrintCode = debugMaster && defaults.getBool("DEBUG_PRINT_CODE");
+    debugMaster = properties.getBool("DEBUG_MASTER");
+    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
+    debugPrintCode = debugMaster && properties.getBool("DEBUG_PRINT_CODE");
 
     if (debugPrintProgress) debugger.printProgress("Initializing compiler....");
 
-    scanner = new Scanner(defaults, debugger);
+    scanner = new Scanner(properties, debugger);
     typeToRule = new HashMap<>();
 
     registerTokens();
@@ -60,7 +60,7 @@ public class Compiler {
   public Function compile(String source) {
     parser = new Parser();
 
-    currentLocals = new LocalsStackSim(defaults, null, TYPE_SCRIPT);
+    currentLocals = new LocalsStackSim(properties, null, TYPE_SCRIPT);
 
     scanner.scan(source);
 
@@ -144,7 +144,7 @@ public class Compiler {
 
   //emitLoop(int)
   private void emitLoop(int loopStart) {
-    int maxLoop = defaults.getInt("MAX_LOOP");
+    int maxLoop = properties.getInt("MAX_LOOP");
 
     emitByte(OP_LOOP);
 
@@ -179,7 +179,7 @@ public class Compiler {
 
   //makeConstant(Object)
   int makeConstant(Object value) {
-    int maxConst = defaults.getInt("MAX_CONST");
+    int maxConst = properties.getInt("MAX_CONST");
     int index = currentChunk().writeConstant(value);
 
     if (index > maxConst) {
@@ -202,7 +202,7 @@ public class Compiler {
 
   //patchJump(int)
   public void patchJump(int offset) {
-    int maxJump = defaults.getInt("MAX_JUMP");
+    int maxJump = properties.getInt("MAX_JUMP");
     // -2 to adjust for the bytecode for the jump offset itself.
     int jump = currentChunk().codes().count() - offset - 2;
 
@@ -356,7 +356,7 @@ public class Compiler {
 
   //addUpvalue(LocalsStackSim, byte, boolean)
   private int addUpvalue(LocalsStackSim locals, byte index, boolean isLocal) {
-    int maxStack = defaults.getInt("MAX_STACK");
+    int maxStack = properties.getInt("MAX_STACK");
     //isLocal controls whether closure captures a local variable or
     //an upvalue from the surrounding function
     int upvalueCount = locals.function().upvalueCount();
@@ -403,7 +403,7 @@ public class Compiler {
   private void addLocal(Token token) {
     //TODO: replace maxStack with max value encodable by signed word
     //THREEDO:  more intelligent limits everywhere
-    int maxStack = defaults.getInt("MAX_STACK");
+    int maxStack = properties.getInt("MAX_STACK");
 
     if (currentLocals.count() >= maxStack) {
       error("Too many local variables in function.");
@@ -483,7 +483,7 @@ public class Compiler {
 
   //argumentList()
   public byte argumentList() {
-    int maxArity = defaults.getInt("MAX_ARITY");
+    int maxArity = properties.getInt("MAX_ARITY");
     byte argCount = 0;
 
     if (!check(TOKEN_RIGHT_PAREN))
@@ -517,7 +517,7 @@ public class Compiler {
   //function(LocalsStackSim.FunctionType)
   private void function(LocalsStackSim.FunctionType type) {
     LocalsStackSim locals = new LocalsStackSim(
-      defaults, currentLocals, type, parser.previous().lexeme()
+      properties, currentLocals, type, parser.previous().lexeme()
     );
     currentLocals = locals;
 
@@ -529,7 +529,7 @@ public class Compiler {
       do {
         locals.function().setArity(locals.function().arity() + 1);
 
-        int maxArity = defaults.getInt("MAX_ARITY");
+        int maxArity = properties.getInt("MAX_ARITY");
 
         if (locals.function().arity() > maxArity)
           errorAtCurrent("Can't have more than " + maxArity + " parameters.");

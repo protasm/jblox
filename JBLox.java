@@ -12,15 +12,15 @@ import jblox.debug.Debugger;
 import jblox.vm.VM;
 
 public class JBLox {
-  private Defaults defaults;
+  private Props properties;
   private Debugger debugger;
   private VM vm;
 
   //JBLox()
   public JBLox() {
-    defaults = new Defaults("/home/ubuntu/jblox/props");
-    debugger = new Debugger(defaults);
-    vm = new VM(defaults, debugger);
+    properties = new Props("props");
+    debugger = new Debugger(properties);
+    vm = new VM(properties, debugger);
   }
 
   //runFile(String)
@@ -30,32 +30,66 @@ public class JBLox {
 
       VM.InterpretResult result = vm.interpret(new String(source, Charset.defaultCharset()));
 
-      if (result == VM.InterpretResult.INTERPRET_COMPILE_ERROR) System.exit(65);
-      if (result == VM.InterpretResult.INTERPRET_RUNTIME_ERROR) System.exit(70);
+      if (result == VM.InterpretResult.INTERPRET_COMPILE_ERROR) shutdown(65, null);
+      if (result == VM.InterpretResult.INTERPRET_RUNTIME_ERROR) shutdown(70, null);
     } catch (FileNotFoundException f) {
-      System.err.println("File not found:  " + path);
-
-      System.exit(1);
+      shutdown(1, "File not found: " + path);
     } catch (IOException i) {
-      System.err.println("IOException occurred.");
-
-      System.exit(1);
+      shutdown(1, "IOException occurred.");
     }
   }
 
   //repl()
-  public void repl() throws IOException {
+  public void repl() {
     InputStreamReader input = new InputStreamReader(System.in);
     BufferedReader reader = new BufferedReader(input);
+
+    int exitCode = 1;
+    String exitMessage = "Unknown error";
 
     for (;;) {
       System.out.print("> ");
 
-      String line = reader.readLine();
+      try {
+        String line = reader.readLine();
 
-      if (line == null || line.equals("quit") || line.equals("q")) break;
+        if (line == null || line.equals("quit") || line.equals("q")) {
+          exitCode = 0;
+          exitMessage = null;
 
-      VM.InterpretResult result = vm.interpret(line);
+          break;
+        }
+
+        VM.InterpretResult result = vm.interpret(line);
+      } catch (IOException e) {
+        exitCode = 1;
+        exitMessage = "IOException reading line.";
+
+        break;
+      }
+    }
+
+    try {
+      input.close();
+      reader.close();
+    } catch (IOException e) {
+      System.err.println(e);
+    }
+
+    shutdown(exitCode, exitMessage);
+  }
+
+  //shutdown(int, String)
+  private void shutdown(int code, String message) {
+    properties.close();
+
+    if (code == 0)
+      System.exit(0);
+    else {
+      if (message != null)
+        System.err.println(message);
+
+      System.exit(code);
     }
   }
 
@@ -63,11 +97,9 @@ public class JBLox {
   public static void main(String[] args) throws IOException {
     JBLox jblox = new JBLox();
 
-    if (args.length > 1) {
-      System.out.println("Usage: jblox [script]");
-
-      System.exit(64);
-    } else if (args.length == 1)
+    if (args.length > 1)
+      jblox.shutdown(64, "Usage: jblox [script]");
+    else if (args.length == 1)
       jblox.runFile(args[0]);
     else
       jblox.repl();

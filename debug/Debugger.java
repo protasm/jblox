@@ -2,7 +2,7 @@ package jblox.debug;
 
 import java.util.Map;
 
-import jblox.Defaults;
+import jblox.Props;
 import jblox.compiler.Chunk;
 import jblox.compiler.Function;
 import jblox.compiler.LocalsStackSim;
@@ -13,11 +13,11 @@ import jblox.vm.CallFrame;
 import static jblox.compiler.OpCode.*;
 
 public class Debugger {
-  private Defaults defaults;
+  private Props properties;
 
-  //Debugger(Defaults)
-  public Debugger(Defaults defaults) {
-    this.defaults = defaults;
+  //Debugger(Props)
+  public Debugger(Props properties) {
+    this.properties = properties;
   }
 
   //printProgress(String)
@@ -34,10 +34,10 @@ public class Debugger {
 
   //traceExecution(CallFrame, LoxMap, LoxStack)
   public void traceExecution(CallFrame frame, LoxMap globals, LoxStack stack) {
-    if (defaults.getBool("DEBUG_PRINT_GLOBALS"))
+    if (properties.getBool("DEBUG_PRINT_GLOBALS"))
       System.out.println("Globals: " + globals);
 
-    if (defaults.getBool("DEBUG_PRINT_STACK"))
+    if (properties.getBool("DEBUG_PRINT_STACK"))
       System.out.println("          " + stack);
 
     disassembleInstruction(frame.closure().function().chunk(), frame.ip());
@@ -45,17 +45,17 @@ public class Debugger {
 
   //disassembleChunk(Chunk, LocalsStackSim, String)
   public void disassembleChunk(Chunk chunk, LocalsStackSim locals, String name) {
-    if (defaults.getBool("DEBUG_PRINT_CODES")) {
+    if (properties.getBool("DEBUG_PRINT_CODES")) {
       System.out.println("Codes: " + chunk.codes());
 
-      if (defaults.getBool("DEBUG_PRINT_LINES"))
+      if (properties.getBool("DEBUG_PRINT_LINES"))
         System.out.println("Lines: " + chunk.lines());
     }
 
-    if (defaults.getBool("DEBUG_PRINT_CONSTANTS"))
+    if (properties.getBool("DEBUG_PRINT_CONSTANTS"))
       System.out.println("Constants: " + chunk.constants());
 
-    if (defaults.getBool("DEBUG_PRINT_LOCALS"))
+    if (properties.getBool("DEBUG_PRINT_LOCALS"))
       System.out.println("Locals: " + locals);
 
     printBanner(name);
@@ -82,7 +82,7 @@ public class Debugger {
     else
       System.out.print(String.format("%4d ", chunk.lines().get(offset)));
 
-    if (defaults.getBool("DEBUG_PRINT_OPCODE"))
+    if (properties.getBool("DEBUG_PRINT_OPCODE"))
       System.out.print("(" + String.format("0x%02X", instruction) + ") ");
 
     switch (instruction) {
