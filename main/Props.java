@@ -1,4 +1,4 @@
-package jblox;
+package jblox.main;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -28,7 +28,7 @@ public final class Props {
 
   //close()
   public void close() {
-    try (OutputStream out = new FileOutputStream("props")) {
+    try (OutputStream out = new FileOutputStream(propsFile)) {
       properties.store(out, "---No Comment---");
 
       out.close();

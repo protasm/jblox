@@ -1,5 +1,5 @@
 #!/bin/bash
 
-~/cr*/c/a.out $1 > 1.txt
+a.out $1 > 1.txt
 jblox $1 > 2.txt
 diff 1.txt 2.txt

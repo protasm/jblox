@@ -2,11 +2,11 @@ package jblox.debug;
 
 import java.util.Map;
 
-import jblox.Props;
 import jblox.compiler.Chunk;
 import jblox.compiler.Function;
-import jblox.compiler.LocalsStackSim;
-import jblox.util.LoxMap;
+import jblox.compiler.CompilerLocals;
+import jblox.main.Props;
+import jblox.util.LoxValueMap;
 import jblox.util.LoxStack;
 import jblox.vm.CallFrame;
 
@@ -33,7 +33,7 @@ public class Debugger {
   }
 
   //traceExecution(CallFrame, LoxMap, LoxStack)
-  public void traceExecution(CallFrame frame, LoxMap globals, LoxStack stack) {
+  public void traceExecution(CallFrame frame, LoxValueMap globals, LoxStack stack) {
     if (properties.getBool("DEBUG_PRINT_GLOBALS"))
       System.out.println("Globals: " + globals);
 
@@ -43,8 +43,8 @@ public class Debugger {
     disassembleInstruction(frame.closure().function().chunk(), frame.ip());
   }
 
-  //disassembleChunk(Chunk, LocalsStackSim, String)
-  public void disassembleChunk(Chunk chunk, LocalsStackSim locals, String name) {
+  //disassembleChunk(Chunk, CompilerLocals, String)
+  public void disassembleChunk(Chunk chunk, CompilerLocals locals, String name) {
     if (properties.getBool("DEBUG_PRINT_CODES")) {
       System.out.println("Codes: " + chunk.codes());
 
@@ -173,7 +173,7 @@ public class Debugger {
 
     System.out.print(String.format("%-16s %4d ", name, operand));
 
-    Function function = (Function)chunk.constants().get(operand);
+    Function function = chunk.constants().get(operand).asFunction();
 
     System.out.println(function);
 

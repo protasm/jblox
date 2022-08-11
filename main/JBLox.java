@@ -1,4 +1,4 @@
-package jblox;
+package jblox.main;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -18,7 +18,7 @@ public class JBLox {
 
   //JBLox()
   public JBLox() {
-    properties = new Props("props");
+    properties = new Props("/home/ubuntu/jblox/props");
     debugger = new Debugger(properties);
     vm = new VM(properties, debugger);
   }

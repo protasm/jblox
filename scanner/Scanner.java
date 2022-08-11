@@ -5,8 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jblox.Props;
 import jblox.debug.Debugger;
+import jblox.main.Props;
 
 import static jblox.scanner.TokenType.*;
 

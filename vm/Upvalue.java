@@ -2,7 +2,7 @@ package jblox.vm;
 
 public class Upvalue {
   private int location;
-  private Object closedValue;
+  private Value closedValue;
   private Upvalue next;
 
   //Upvalue(int)
@@ -21,12 +21,12 @@ public class Upvalue {
   }
 
   //closedValue()
-  public Object closedValue() {
+  public Value closedValue() {
     return closedValue;
   }
 
-  //setClosedValue(Object)
-  public void setClosedValue(Object closedValue) {
+  //setClosedValue(Value)
+  public void setClosedValue(Value closedValue) {
     this.closedValue = closedValue;
   }
 

@@ -1,17 +1,17 @@
 package jblox.vm;
 
 public class BoundMethod {
-  private Object receiver;
+  private Value receiver;
   private Closure method;
 
-  //BoundMethod(Object, Closure)
-  public BoundMethod(Object receiver, Closure method) {
+  //BoundMethod(Value, Closure)
+  public BoundMethod(Value receiver, Closure method) {
     this.receiver = receiver;
     this.method = method;
   }
 
   //receiver()
-  public Object receiver() {
+  public Value receiver() {
     return receiver;
   }
 

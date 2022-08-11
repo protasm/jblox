@@ -1,42 +1,27 @@
 package jblox.util;
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class LoxArray<E> {
-  private List<E> elements;
+public abstract class LoxArray {
+  protected int capacity;
+  protected int count;
 
   //LoxArray()
   public LoxArray() {
-    elements = new ArrayList<>();
+    reset();
+  }
+
+  //capacity()
+  public int capacity() {
+    return capacity;
   }
 
   //count()
   public int count() {
-    return elements.size();
+    return count;
   }
 
-  //get(int)
-  public E get(int index) {
-    return elements.get(index);
-  }
-
-  //set(int, E)
-  public void set(int index, E element) {
-    elements.set(index, element);
-  }
-
-  //add(E)
-  public int add(E element) {
-    elements.add(element);
-
-    //return index of newly added element
-    return elements.size() - 1;
-  }
-
-  //toString()
-  @Override
-  public String toString() {
-    return elements.toString();
+  //reset()
+  public void reset() {
+    capacity = 0;
+    count = 0;
   }
 }

@@ -1,3 +1,0 @@
-#!/bin/bash
-
-java jblox.JBLox $1

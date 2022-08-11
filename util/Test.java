@@ -1,65 +1,50 @@
 package jblox.util;
 
+import jblox.vm.Value;
+import jblox.vm.Value.ValueType;
+
 class Test {
   //Test()
   public Test() {
-    LoxStack stack = new LoxStack(1024);
+    LoxValueStack stack = new LoxValueStack();
 
-    stack.push(new String[] { "One", "Two", "Three", "Four", "Five" } );
+    stack.push(new Value(ValueType.VAL_STRING, "One"));
+    stack.push(new Value(ValueType.VAL_STRING, "Two"));
+    stack.push(new Value(ValueType.VAL_NUMBER, 3));
+    stack.push(new Value(ValueType.VAL_BOOL, true));
+    stack.push(new Value(ValueType.VAL_NIL, null));
     System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
 
     System.out.println("stack.pop():");
     System.out.println(stack.pop());
     System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
 
     System.out.println("stack.peek():");
     System.out.println(stack.peek());
-    System.out.println("Count: " + stack.count() + "\n");
 
-    System.out.println("stack.push('Six'):");
-    stack.push("Six");
+    System.out.println("stack.push(9):");
+    stack.push(new Value(ValueType.VAL_NUMBER, 9));;
     System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
 
-    System.out.println("stack.peek(2, false):");
-    Object[] values = stack.peek(2, false);
-    System.out.println(java.util.Arrays.toString(values));
+    System.out.println("stack.set(3, 'FOO'):");
+    stack.set(3, new Value(ValueType.VAL_STRING, "FOO"));
     System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
-
-    System.out.println("stack.peek(2, true):");
-    values = stack.peek(2, true);
-    System.out.println(java.util.Arrays.toString(values));
-    System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
-
-    System.out.println("stack.pop(2, false):");
-    values = stack.pop(2, false);
-    System.out.println(java.util.Arrays.toString(values));
-    System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
-
-    System.out.println("stack.push({ 'Seven', 'Eight', 'Nine' }):");
-    stack.push(new String[] { "Seven", "Eight", "Nine"} );
-    System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
 
     System.out.println("stack.get(2):");
     System.out.println(stack.get(2));
-    System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
-
-    System.out.println("stack.set(3, 'FOO'):");
-    stack.set(3, "FOO");
-    System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
 
     System.out.println("stack.truncate(4):");
     stack.truncate(4);
     System.out.println(stack);
-    System.out.println("Count: " + stack.count() + "\n");
+
+    System.out.println("stack.reset():");
+    stack.reset();
+    System.out.println(stack);
+
+    System.out.println("stack.push(3/2):");
+    double d = (double)3/2;
+    stack.push(new Value(ValueType.VAL_NUMBER, d));
+    System.out.println(stack);
   }
 
   public static void main(String[] args) {

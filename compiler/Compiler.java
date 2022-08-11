@@ -3,16 +3,18 @@ package jblox.compiler;
 import java.util.HashMap;
 import java.util.Map;
 
-import jblox.Props;
 import jblox.debug.Debugger;
+import jblox.main.Props;
 import jblox.parser.ParseRule;
 import jblox.parser.Parser;
 import jblox.parser.parselet.*;
 import jblox.scanner.Scanner;
 import jblox.scanner.Token;
 import jblox.scanner.TokenType;
+import jblox.vm.Value;
+import jblox.vm.Value.ValueType;
 
-import static jblox.compiler.LocalsStackSim.FunctionType.*;
+import static jblox.compiler.CompilerLocals.FunctionType.*;
 import static jblox.compiler.OpCode.*;
 import static jblox.parser.Parser.Precedence.*;
 import static jblox.scanner.TokenType.*;
@@ -23,7 +25,7 @@ public class Compiler {
   private Scanner scanner;
   private Map<TokenType, ParseRule> typeToRule;
   private Parser parser;
-  private LocalsStackSim currentLocals;
+  private CompilerLocals currentLocals;
   private ClassCompiler currentClass;
   private boolean debugMaster;
   private boolean debugPrintProgress;
@@ -60,7 +62,7 @@ public class Compiler {
   public Function compile(String source) {
     parser = new Parser();
 
-    currentLocals = new LocalsStackSim(properties, null, TYPE_SCRIPT);
+    currentLocals = new CompilerLocals(properties, null, TYPE_SCRIPT);
 
     scanner.scan(source);
 
@@ -177,8 +179,8 @@ public class Compiler {
     emitByte(OP_RETURN);
   }
 
-  //makeConstant(Object)
-  int makeConstant(Object value) {
+  //makeConstant(Value)
+  int makeConstant(Value value) {
     int maxConst = properties.getInt("MAX_CONST");
     int index = currentChunk().writeConstant(value);
 
@@ -192,8 +194,8 @@ public class Compiler {
     return index;
   }
 
-  //emitConstant(Object)
-  public void emitConstant(Object value) {
+  //emitConstant(Value)
+  public void emitConstant(Value value) {
     int index = makeConstant(value);
 
     emitByte(OP_CONSTANT);
@@ -247,15 +249,15 @@ public class Compiler {
     currentLocals.setScopeDepth(currentLocals.scopeDepth() - 1);
 
     while (
-      currentLocals.count() > 0 &&
-      currentLocals.peek().depth() > currentLocals.scopeDepth()
+      currentLocals.locals().count() > 0 &&
+      currentLocals.locals().peek().depth() > currentLocals.scopeDepth()
     ) {
-      if (currentLocals.get(currentLocals.count() - 1).isCaptured())
+      if (currentLocals.locals().get(currentLocals.locals().count() - 1).isCaptured())
         emitByte(OP_CLOSE_UPVALUE);
       else
         emitByte(OP_POP);
 
-      currentLocals.pop();
+      currentLocals.locals().pop();
     }
   }
 
@@ -326,10 +328,9 @@ public class Compiler {
 
   //identifierConstant(Token)
   public int identifierConstant(Token token) {
-    int index = makeConstant(token.lexeme());
-
     //return index of newly added constant
-    return index;
+    //return makeConstant(new Value(ValueType.VAL_STRING, token.lexeme()));
+    return makeConstant(new Value(token.lexeme()));
   }
 
   //identifiersEqual(Token, Token)
@@ -337,10 +338,10 @@ public class Compiler {
     return a.lexeme().equals(b.lexeme());
   }
 
-  //resolveLocal(LocalsStackSim, Token)
-  private int resolveLocal(LocalsStackSim locals, Token token) {
-    for (int i = locals.count() - 1; i >= 0; i--) {
-      Local local = locals.get(i);
+  //resolveLocal(CompilerLocals, Token)
+  private int resolveLocal(CompilerLocals locals, Token token) {
+    for (int i = locals.locals().count() - 1; i >= 0; i--) {
+      Local local = locals.locals().get(i);
 
       if (identifiersEqual(token, local.token())) {
         if (local.depth() == -1) //"sentinel" depth
@@ -354,8 +355,8 @@ public class Compiler {
     return -1;
   }
 
-  //addUpvalue(LocalsStackSim, byte, boolean)
-  private int addUpvalue(LocalsStackSim locals, byte index, boolean isLocal) {
+  //addUpvalue(CompilerLocals, byte, boolean)
+  private int addUpvalue(CompilerLocals locals, byte index, boolean isLocal) {
     int maxStack = properties.getInt("MAX_STACK");
     //isLocal controls whether closure captures a local variable or
     //an upvalue from the surrounding function
@@ -377,16 +378,16 @@ public class Compiler {
     return locals.addUpvalue(new Upvalue(index, isLocal));
   }
 
-  //resolveUpvalue(LocalsStackSim, Token)
-  private int resolveUpvalue(LocalsStackSim locals, Token token) {
-    LocalsStackSim enclosing = locals.enclosing();
+  //resolveUpvalue(CompilerLocals, Token)
+  private int resolveUpvalue(CompilerLocals locals, Token token) {
+    CompilerLocals enclosing = locals.enclosing();
 
     if (enclosing == null) return -1;
 
     int local = resolveLocal(enclosing, token);
 
     if (local != -1) {
-      enclosing.get(local).setIsCaptured(true);
+      enclosing.locals().get(local).setIsCaptured(true);
 
       return addUpvalue(locals, (byte)local, true);
     }
@@ -405,13 +406,13 @@ public class Compiler {
     //THREEDO:  more intelligent limits everywhere
     int maxStack = properties.getInt("MAX_STACK");
 
-    if (currentLocals.count() >= maxStack) {
+    if (currentLocals.locals().count() >= maxStack) {
       error("Too many local variables in function.");
 
       return;
     }
 
-    currentLocals.push(new Local(token, -1));
+    currentLocals.locals().push(new Local(token, -1));
   }
 
   //declareVariable()
@@ -425,8 +426,8 @@ public class Compiler {
 
     //Start at the end of the locals array and work backward,
     //looking for an existing variable with the same name.
-    for (int i = currentLocals.count() - 1; i >= 0; i--) {
-      Local local = currentLocals.get(i);
+    for (int i = currentLocals.locals().count() - 1; i >= 0; i--) {
+      Local local = currentLocals.locals().get(i);
 
       if (local.depth() != -1 && local.depth() < currentLocals.scopeDepth())
         break;
@@ -514,9 +515,9 @@ public class Compiler {
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
   }
 
-  //function(LocalsStackSim.FunctionType)
-  private void function(LocalsStackSim.FunctionType type) {
-    LocalsStackSim locals = new LocalsStackSim(
+  //function(CompilerLocals.FunctionType)
+  private void function(CompilerLocals.FunctionType type) {
+    CompilerLocals locals = new CompilerLocals(
       properties, currentLocals, type, parser.previous().lexeme()
     );
     currentLocals = locals;
@@ -547,14 +548,14 @@ public class Compiler {
     Function function = endCompilation(); //sets currentLocals to enclosing
 
     emitByte(OP_CLOSURE);
-    emitWord((short)makeConstant(function));
+    emitWord((short)makeConstant(new Value(ValueType.VAL_FUNCTION, function)));
 
     for (int i = 0; i < function.upvalueCount(); i++) {
       emitByte((byte)(locals.getUpvalue(i).isLocal() ? 1 : 0));
       emitByte((byte)(locals.getUpvalue(i).index()));
     }
 
-    //No endScope() needed because LocalsStackSim is ended completely
+    //No endScope() needed because CompilerLocals is ended completely
     //at the end of the function body.
   }
 
@@ -564,7 +565,7 @@ public class Compiler {
 
     int constant = identifierConstant(parser.previous());
 
-    LocalsStackSim.FunctionType type = TYPE_METHOD;
+    CompilerLocals.FunctionType type = TYPE_METHOD;
 
     if (parser.previous().lexeme().equals("init"))
       type = TYPE_INITIALIZER;

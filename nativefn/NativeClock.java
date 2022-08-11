@@ -1,9 +1,16 @@
 package jblox.nativefn;
 
+import jblox.vm.Value;
+import jblox.vm.Value.ValueType;
+
 public class NativeClock extends NativeFn {
-  //execute(Object[])
-  public Object execute(Object[] args) {
-    return (System.nanoTime() / 1000000000);
+  //execute(Value[])
+  public Value execute(Value[] args) {
+    //Long clock = System.nanoTime() / 1000000000;
+    Long clock = System.currentTimeMillis();
+
+    //return new Value(ValueType.VAL_NUMBER, (double)clock);
+    return new Value((double)clock);
   }
 
   //toString()

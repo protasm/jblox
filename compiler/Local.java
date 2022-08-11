@@ -2,7 +2,7 @@ package jblox.compiler;
 
 import jblox.scanner.Token;
 
-class Local {
+public class Local {
   private Token token;
   private int depth;
   private boolean isCaptured;

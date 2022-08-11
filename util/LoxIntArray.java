@@ -1,27 +1,27 @@
 package jblox.util;
 
-public class LoxByteArray extends LoxArray {
-  private byte[] elements;
+public class LoxIntArray extends LoxArray {
+  private int[] elements;
 
-  //LoxByteArray()
-  public LoxByteArray() {
+  //LoxIntArray()
+  public LoxIntArray() {
     super();
 
-    elements = new byte[0];
+    elements = new int[0];
   }
 
   //get(int)
-  public byte get(int index) {
+  public int get(int index) {
     return elements[index];
   }
 
-  //set(int, byte)
-  public void set(int index, byte element) {
+  //set(int, int)
+  public void set(int index, int element) {
     elements[index] = element;
   }
 
-  //add(byte)
-  public int add(byte element) {
+  //add(int)
+  public int add(int element) {
     checkCapacity();
 
     elements[count++] = element;
@@ -36,7 +36,7 @@ public class LoxByteArray extends LoxArray {
       //grow capacity
       capacity = capacity < 8 ? 8 : capacity * 2;
 
-      byte[] newElements = new byte[capacity];
+      int[] newElements = new int[capacity];
 
       //copy elements into new, larger array
       System.arraycopy(elements, 0, newElements, 0, count);
@@ -50,11 +50,8 @@ public class LoxByteArray extends LoxArray {
   public String toString() {
     StringBuilder sb = new StringBuilder("[");
 
-    for (int i = 0; i < count; i++) {
-      sb.append(String.format("%02X", elements[i]));
-
-      if (i < count - 1) sb.append(", ");
-    }
+    for (int i = 0; i < count; i++)
+      sb.append(elements[i] + ((i < count - 1) ? ", " : ""));
 
     sb.append("]");
 

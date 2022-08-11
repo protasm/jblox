@@ -1,29 +1,33 @@
 package jblox.vm;
 
-import jblox.Props;
 import jblox.compiler.Chunk;
 import jblox.compiler.Compiler;
 import jblox.compiler.Function;
 import jblox.debug.Debugger;
+import jblox.main.Props;
 import jblox.nativefn.NativeClock;
 import jblox.nativefn.NativeFn;
 import jblox.util.LoxArray;
+import jblox.util.LoxCallFrameStack;
+import jblox.util.LoxIntArray;
 import jblox.util.LoxMap;
 import jblox.util.LoxStack;
-import jblox.vm.Closure;
+import jblox.util.LoxValueMap;
+import jblox.util.LoxValueStack;
+import jblox.vm.Value.ValueType;
 
 import static jblox.compiler.OpCode.*;
 
 public class VM {
   //InterpretResult
-  public static enum InterpretResult {
+  public enum InterpretResult {
     INTERPRET_OK,
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR,
   }
 
   //Operation
-  private static enum Operation {
+  private enum Operation {
     OPERATION_PLUS,
     OPERATION_SUBTRACT,
     OPERATION_MULT,
@@ -35,9 +39,9 @@ public class VM {
   private Props properties;
   private Debugger debugger;
   private Compiler compiler;
-  private LoxMap globals;
-  private LoxStack stack;
-  private LoxStack frames;
+  private LoxValueMap globals;
+  private LoxValueStack stack;
+  private LoxCallFrameStack frames;
   private String initString;
   private boolean debugMaster;
   private boolean debugPrintProgress;
@@ -56,9 +60,9 @@ public class VM {
     if (debugPrintProgress) debugger.printProgress("Initializing VM....");
 
     compiler = new Compiler(properties, debugger);
-    globals = new LoxMap();
-    stack = new LoxStack(properties.getInt("MAX_STACK"));
-    frames = new LoxStack(properties.getInt("MAX_FRAMES"));
+    globals = new LoxValueMap();
+    stack = new LoxValueStack();
+    frames = new LoxCallFrameStack();
     initString = "init";
 
     defineNativeFn("clock", new NativeClock());
@@ -81,10 +85,10 @@ public class VM {
       System.out.println(s);
 
     for (int i = frames.count() - 1; i >= 0; i--) {
-      CallFrame frame = (CallFrame)frames.get(i);
+      CallFrame frame = frames.get(i);
       Function function = frame.closure().function();
-      LoxArray lines = function.chunk().lines();
-      int line = (int)lines.get(frame.ip() - 1);
+      LoxIntArray lines = function.chunk().lines();
+      int line = lines.get(frame.ip() - 1);
 
       System.err.print("[line " + line + "] in ");
 
@@ -99,7 +103,7 @@ public class VM {
 
   //defineNativeFn(String, NativeFn)
   private void defineNativeFn(String name, NativeFn nativeFn) {
-    globals.put(name, nativeFn);
+    globals.put(name, new Value(ValueType.VAL_NATIVEFN, nativeFn));
   }
 
   //call(Closure, int)
@@ -125,30 +129,31 @@ public class VM {
       return false;
     }
 
-    frames.push(new CallFrame(closure, base));
+    CallFrame frame = new CallFrame(closure, base);
+    frames.push(frame);
 
     return true;
   }
 
-  //callValue(Object, int)
-  private boolean callValue(Object callee, int argCount) {
-    if (callee instanceof BoundMethod) {
-      BoundMethod bound = (BoundMethod)callee;
+  //callValue(Value, int)
+  private boolean callValue(Value callee, int argCount) {
+    if (callee.isBoundMethod()) {
+      BoundMethod bound = callee.asBoundMethod();
 
-      //vm.stackTop[-argCount - 1] = bound->receiver;
       stack.set(stack.top() - argCount, bound.receiver());
 
       return call(bound.method(), argCount);
-    } else if (callee instanceof LoxClass) {
-      LoxClass klass = (LoxClass)callee;
+    } else if (callee.isLoxClass()) {
+      LoxClass klass = callee.asLoxClass();
       LoxInstance instance = new LoxInstance(klass);
+      Value value = new Value(ValueType.VAL_LOXINSTANCE, instance);
 
-      stack.set(stack.top() - argCount, instance);
+      stack.set(stack.top() - argCount, value);
 
-      Object initializer = klass.methods().get(initString);
+      Closure initializer = klass.methods().get(initString);
 
       if (initializer != null)
-        return call((Closure)initializer, argCount);
+        return call(initializer, argCount);
       else if (argCount != 0) {
         runtimeError("Expected 0 arguments but got " + argCount + ".");
 
@@ -156,21 +161,19 @@ public class VM {
       }
 
       return true;
-    } else if (callee instanceof Closure)
-      return call((Closure)callee, argCount);
-    else if (callee instanceof NativeFn) {
-      NativeFn nativeFn = (NativeFn)callee;
-      Object[] args;
+    } else if (callee.isClosure())
+      return call(callee.asClosure(), argCount);
+    else if (callee.isNativeFn()) {
+      NativeFn nativeFn = callee.asNativeFn();
+      Value[] args = new Value[argCount];
 
-      if (argCount == 0)
-        args = new Object[0];
-      else
-        args = stack.peek(argCount, true);
+      for (int i = 0; i < argCount; i++)
+        args[i] = stack.get(stack.count() - argCount + i);
 
-      Object result = nativeFn.execute(args);
+      Value result = nativeFn.execute(args);
 
       //pop args plus native function
-      stack.pop(argCount + 1, false);
+      stack.truncate(stack.top() - argCount);
 
       stack.push(result);
 
@@ -190,25 +193,25 @@ public class VM {
       return false;
     }
 
-    Object method = klass.methods().get(name);
+    Closure method = klass.methods().get(name);
 
-    return call((Closure)method, argCount);
+    return call(method, argCount);
   }
 
   //invoke(String, int)
   private boolean invoke(String name, int argCount) {
-    Object receiver = stack.get(stack.top() - argCount);
+    Value receiver = stack.get(stack.top() - argCount);
 
-    if (!(receiver instanceof LoxInstance)) {
+    if (!(receiver.isLoxInstance())) {
       runtimeError("Only instances have methods.");
 
       return false;
     }
 
-    LoxInstance instance = (LoxInstance)receiver;
+    LoxInstance instance = receiver.asLoxInstance();
 
     if (instance.fields().containsKey(name)) {
-      Object value = instance.fields().get(name);
+      Value value = instance.fields().get(name);
 
       stack.set(stack.top() - argCount, value);
 
@@ -226,13 +229,13 @@ public class VM {
       return false;
     }
 
-    Object method = klass.methods().get(name);
-
-    BoundMethod bound = new BoundMethod(stack.peek(), (Closure)method);
+    Closure method = klass.methods().get(name);
+    BoundMethod bound = new BoundMethod(stack.peek(), method);
+    Value value = new Value(ValueType.VAL_BOUNDMETHOD, bound);
 
     stack.pop();
 
-    stack.push(bound);
+    stack.push(value);
 
     return true;
   }
@@ -282,52 +285,52 @@ public class VM {
 
   //defineMethod(String)
   void defineMethod(String name) {
-    Closure method = (Closure)stack.peek();
-    LoxClass klass = (LoxClass)stack.get(stack.top() - 1);
+    Closure method = stack.peek().asClosure();
+    LoxClass klass = stack.get(stack.top() - 1).asLoxClass();
 
     klass.methods().put(name, method);
 
     stack.pop();
   }
 
-  //isFalsey(Object)
-  boolean isFalsey(Object value) {
+  //isFalsey(Value)
+  boolean isFalsey(Value value) {
     //nil and false are falsey and every other value behaves like true.
-    return value == null || (value instanceof Boolean) && !((boolean)value);
+    return value.isNil() || (value.isBool() && !(value.asBool()));
   }
 
   //concatenate()
   private void concatenate() {
-    String b = (String)stack.pop();
-    String a = (String)stack.pop();
+    String b = stack.pop().asString();
+    String a = stack.pop().asString();
 
-    stack.push(a + b);
+    //stack.push(new Value(ValueType.VAL_STRING, a + b));
+    stack.push(new Value(a + b));
   }
 
   //equate()
   private void equate() {
-    Object b = stack.pop();
-    Object a = stack.pop();
+    Value b = stack.pop();
+    Value a = stack.pop();
 
-    if (a == null)
-      stack.push(a == b);
-    else
-      stack.push(a.equals(b));
+    //stack.push(new Value(ValueType.VAL_BOOL, a.equals(b)));
+    stack.push(new Value(a.equals(b)));
   }
 
   //interpret(String)
-  public VM.InterpretResult interpret(String source) {
+  public InterpretResult interpret(String source) {
     Function function = compiler.compile(source);
 
     if (debugPrintProgress)
       debugger.printProgress("Executing....");
 
     if (function == null)
-      return VM.InterpretResult.INTERPRET_COMPILE_ERROR;
+      return InterpretResult.INTERPRET_COMPILE_ERROR;
 
     Closure closure = new Closure(function);
+    Value value = new Value(ValueType.VAL_CLOSURE, closure);
 
-    stack.push(closure);
+    stack.push(value);
 
     call(closure, 0);
 
@@ -350,7 +353,7 @@ public class VM {
   }
 
   //readConstant(CallFrame)
-  private Object readConstant(CallFrame frame) {
+  private Value readConstant(CallFrame frame) {
     short index = readWord(frame);
 
     return frame.closure().function().chunk().constants().get(index);
@@ -358,12 +361,12 @@ public class VM {
 
   //readString(CallFrame)
   private String readString(CallFrame frame) {
-    return (String)readConstant(frame);
+    return readConstant(frame).asString();
   }
 
   //run()
-  private VM.InterpretResult run() {
-    CallFrame frame = (CallFrame)frames.peek();
+  private InterpretResult run() {
+    CallFrame frame = frames.peek();
 
     //Bytecode dispatch loop.
     for (;;) {
@@ -372,9 +375,12 @@ public class VM {
 
       switch (readByte(frame)) {
         case OP_CONSTANT: stack.push(readConstant(frame)); break;
-        case OP_NIL:      stack.push((Object)null); break;
-        case OP_TRUE:     stack.push(true); break;
-        case OP_FALSE:    stack.push(false); break;
+        //case OP_NIL:      stack.push(new Value(ValueType.VAL_NIL, null)); break;
+        case OP_NIL:      stack.push(new Value()); break;
+        //case OP_TRUE:     stack.push(new Value(ValueType.VAL_BOOL, true)); break;
+        case OP_TRUE:     stack.push(new Value(true)); break;
+        //case OP_FALSE:    stack.push(new Value(ValueType.VAL_BOOL, false)); break;
+        case OP_FALSE:    stack.push(new Value(false)); break;
         case OP_POP:      stack.pop(); break;
         case OP_GET_LOCAL:
           short glSlot = readWord(frame);
@@ -394,7 +400,7 @@ public class VM {
           if (!globals.containsKey(ggKey))
             return error("Undefined variable '" + ggKey + "'.");
 
-          Object global = globals.get(ggKey);
+          Value global = globals.get(ggKey);
 
           stack.push(global);
 
@@ -440,15 +446,15 @@ public class VM {
 
           break;
         case OP_GET_PROPERTY:
-          Object gpValue = stack.peek();
+          Value gpValue = stack.peek();
 
-          if (!(gpValue instanceof LoxInstance)) {
+          if (!(gpValue.isLoxInstance())) {
             runtimeError("Only instances have properties.");
 
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
           }
 
-          LoxInstance gpInstance = (LoxInstance)gpValue;
+          LoxInstance gpInstance = gpValue.asLoxInstance();
           String name = readString(frame);
 
           if (gpInstance.fields().containsKey(name)) {
@@ -460,35 +466,36 @@ public class VM {
           }
 
           if (!bindMethod(gpInstance.klass(), name))
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
           break;
         case OP_SET_PROPERTY:
-          Object spValue = stack.get(stack.top() - 1);
+          Value spValue = stack.get(stack.top() - 1);
 
-          if (!(spValue instanceof LoxInstance)) {
+          if (!(spValue.isLoxInstance())) {
             runtimeError("Only instances have fields.");
 
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
           }
 
-          LoxInstance spInstance = (LoxInstance)spValue;
+          LoxInstance spInstance = spValue.asLoxInstance();
 
           spInstance.fields().put(readString(frame), stack.peek());
 
           //pop value that was set plus instance object
-          Object[] values = stack.pop(2, false);
+          Value setValue = stack.pop();
+          stack.pop();
 
           //push value back on stack
-          stack.push(values[0]);
+          stack.push(setValue);
 
           break;
         case OP_GET_SUPER:
           String gsName = readString(frame);
-          LoxClass gsSuperclass = (LoxClass)stack.pop();
+          LoxClass gsSuperclass = stack.pop().asLoxClass();
 
           if (!bindMethod(gsSuperclass, gsName))
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
           break;
         case OP_EQUAL: equate(); break;
@@ -496,21 +503,21 @@ public class VM {
           if (!twoNumericOperands())
             return errorTwoNumbers();
 
-          binaryOp(VM.Operation.OPERATION_GT);
+          binaryOp(Operation.OPERATION_GT);
 
           break;
         case OP_LESS:
           if (!twoNumericOperands())
             return errorTwoNumbers();
 
-          binaryOp(VM.Operation.OPERATION_LT);
+          binaryOp(Operation.OPERATION_LT);
 
           break;
         case OP_ADD:
           if (twoStringOperands())
             concatenate();
           else if (twoNumericOperands())
-            binaryOp(VM.Operation.OPERATION_PLUS);
+            binaryOp(Operation.OPERATION_PLUS);
           else
             return errorTwoNumbersOrStrings();
 
@@ -519,32 +526,34 @@ public class VM {
           if (!twoNumericOperands())
             return errorTwoNumbers();
 
-          binaryOp(VM.Operation.OPERATION_SUBTRACT);
+          binaryOp(Operation.OPERATION_SUBTRACT);
 
           break;
         case OP_MULTIPLY:
           if (!twoNumericOperands())
             return errorTwoNumbers();
 
-          binaryOp(VM.Operation.OPERATION_MULT);
+          binaryOp(Operation.OPERATION_MULT);
 
           break;
         case OP_DIVIDE:
           if (!twoNumericOperands())
             return errorTwoNumbers();
 
-          binaryOp(VM.Operation.OPERATION_DIVIDE);
+          binaryOp(Operation.OPERATION_DIVIDE);
 
           break;
         case OP_NOT:
-          stack.push(isFalsey(stack.pop()));
+          //stack.push(new Value(ValueType.VAL_BOOL, isFalsey(stack.pop())));
+          stack.push(new Value(isFalsey(stack.pop())));
 
           break;
         case OP_NEGATE:
           if (!oneNumericOperand())
             return errorOneNumber();
 
-          stack.push(-((Double)stack.pop()));
+          //stack.push(new Value(ValueType.VAL_NUMBER, -(stack.pop().asNumber())));
+          stack.push(new Value(-(stack.pop().asNumber())));
 
           break;
         case OP_PRINT:
@@ -572,12 +581,12 @@ public class VM {
           break;
         case OP_CALL:
           int callArgCount = readByte(frame);
-          Object callee = stack.get(stack.top() - callArgCount);
+          Value callee = stack.get(stack.top() - callArgCount);
 
           if (!callValue(callee, callArgCount))
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
-          frame = (CallFrame)frames.peek();
+          frame = frames.peek();
 
           break;
         case OP_INVOKE:
@@ -585,27 +594,27 @@ public class VM {
           int invArgCount = readByte(frame);
 
           if (!invoke(invMethod, invArgCount))
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
-          frame = (CallFrame)frames.peek();
+          frame = frames.peek();
 
           break;
         case OP_SUPER_INVOKE:
           String siMethod = readString(frame);
           int siArgCount = readByte(frame);
-          LoxClass siSuperclass = (LoxClass)stack.pop();
+          LoxClass siSuperclass = stack.pop().asLoxClass();
 
           if (!invokeFromClass(siSuperclass, siMethod, siArgCount))
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
-          frame = (CallFrame)frames.peek();
+          frame = frames.peek();
 
           break;
         case OP_CLOSURE:
-          Function function = (Function)readConstant(frame);
+          Function function = readConstant(frame).asFunction();
           Closure closure = new Closure(function);
 
-          stack.push(closure);
+          stack.push(new Value(ValueType.VAL_CLOSURE, closure));
 
           for (int i = 0; i < closure.upvalueCount(); i++) {
             byte isLocal = readByte(frame);
@@ -626,7 +635,7 @@ public class VM {
 
           break;
         case OP_RETURN:
-          Object result = stack.pop();
+          Value result = stack.pop();
 
           closeUpvalues(frame.base());
 
@@ -635,32 +644,35 @@ public class VM {
           if (frames.count() == 0) {
             stack.pop();
 
-            return VM.InterpretResult.INTERPRET_OK;
+            return InterpretResult.INTERPRET_OK;
           }
 
           stack.truncate(frame.base());
 
           stack.push(result);
 
-          frame = (CallFrame)frames.peek();
+          frame = frames.peek();
 
           break;
         case OP_CLASS:
-          stack.push(new LoxClass(readString(frame)));
+          LoxClass classLoxClass = new LoxClass(readString(frame));
+          Value classVal = new Value(ValueType.VAL_LOXCLASS, classLoxClass);
+
+          stack.push(classVal);
 
           break;
         case OP_INHERIT:
-          Object superclass = stack.get(stack.top() - 1);
+          Value superclass = stack.get(stack.top() - 1);
 
-          if (!(superclass instanceof LoxClass)) {
+          if (!(superclass.isLoxClass())) {
             runtimeError("Superclass must be a class.");
 
-            return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+            return InterpretResult.INTERPRET_RUNTIME_ERROR;
           }
 
-          LoxClass subclass = (LoxClass)stack.peek();
+          LoxClass subclass = stack.peek().asLoxClass();
 
-          subclass.inheritMethods(((LoxClass)superclass).methods());
+          subclass.inheritMethods(superclass.asLoxClass().methods());
 
           stack.pop(); // Subclass.
 
@@ -675,80 +687,92 @@ public class VM {
 
   //oneNumericOperand()
   private boolean oneNumericOperand() {
-    return stack.peek() instanceof Number;
+    return stack.peek().isNumber();
   }
 
   //errorOneNumber()
-  private VM.InterpretResult errorOneNumber() {
+  private InterpretResult errorOneNumber() {
     return error("Operand must be a number");
   }
 
   //twoNumericOperands()
   private boolean twoNumericOperands() {
-    Object first = stack.pop(); //temporarily pop
-    Object second = stack.peek();
+    Value first = stack.pop(); //temporarily pop
+    Value second = stack.peek();
 
     stack.push(first); //push back again
 
-    return (
-      first instanceof Number &&
-      second instanceof Number
-    );
+    return first.isNumber() && second.isNumber();
   }
 
   //errorTwoNumbers()
-  private VM.InterpretResult errorTwoNumbers() {
+  private InterpretResult errorTwoNumbers() {
     return error("Operands must be two numbers.");
   }
 
   //twoStringOperands()
   private boolean twoStringOperands() {
-    Object first = stack.pop(); //temporarily pop
-    Object second = stack.peek();
+    Value first = stack.pop(); //temporarily pop
+    Value second = stack.peek();
 
     stack.push(first); //push back again
 
-    return (
-      first instanceof String &&
-      second instanceof String
-    );
+    return first.isString() && second.isString();
   }
 
   //errorTwoStrings()
-  private VM.InterpretResult errorTwoStrings() {
+  private InterpretResult errorTwoStrings() {
     return error("Operands must be two strings.");
   }
 
   //errorTwoNumbersOrStrings()
-  private VM.InterpretResult errorTwoNumbersOrStrings() {
+  private InterpretResult errorTwoNumbersOrStrings() {
     return error("Operands must be two numbers or two strings.");
   }
 
   //error(String)
-  private VM.InterpretResult error(String message) {
+  private InterpretResult error(String message) {
     runtimeError(message);
 
-    return VM.InterpretResult.INTERPRET_RUNTIME_ERROR;
+    return InterpretResult.INTERPRET_RUNTIME_ERROR;
   }
 
-  //binaryOp(VM.Operation)
-  private void binaryOp(VM.Operation op) {
-    Double b = ((Number)stack.pop()).doubleValue();
-    Double a = ((Number)stack.pop()).doubleValue();
+  //binaryOp(Operation)
+  private void binaryOp(Operation op) {
+    double b = stack.pop().asNumber();
+    double a = stack.pop().asNumber();
 
     switch (op) {
       case OPERATION_PLUS:
-        stack.push(a + b); break;
+        //stack.push(new Value(ValueType.VAL_NUMBER, a + b));
+        stack.push(new Value(a + b));
+
+        break;
       case OPERATION_SUBTRACT:
-        stack.push(a - b); break;
+        //stack.push(new Value(ValueType.VAL_NUMBER, a - b));
+        stack.push(new Value(a - b));
+
+        break;
       case OPERATION_MULT:
-        stack.push(a * b); break;
+        //stack.push(new Value(ValueType.VAL_NUMBER, a * b));
+        stack.push(new Value(a * b));
+
+        break;
       case OPERATION_DIVIDE:
-        stack.push(a / b); break;
+        //stack.push(new Value(ValueType.VAL_NUMBER, a / b));
+        stack.push(new Value(a / b));
+
+        break;
       case OPERATION_GT:
-        stack.push(a > b); break;
+        //stack.push(new Value(ValueType.VAL_BOOL, a > b));
+        stack.push(new Value(a > b));
+
+        break;
       case OPERATION_LT:
-        stack.push(a < b); break;
+        //stack.push(new Value(ValueType.VAL_BOOL, a < b));
+        stack.push(new Value(a < b));
+
+        break;
     } //switch
   }
 }

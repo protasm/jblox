@@ -1,0 +1,9 @@
+#!/bin/bash
+
+DIR="/home/ubuntu/jblox"
+
+clean
+
+find $DIR -name "*.java" > $DIR/sources.txt
+javac -g @$DIR/sources.txt
+rm $DIR/sources.txt

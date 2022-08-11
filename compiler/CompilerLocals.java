@@ -1,65 +1,64 @@
 package jblox.compiler;
 
-import jblox.Props;
+import jblox.main.Props;
 import jblox.scanner.Token;
-import jblox.util.LoxStack;
+import jblox.util.LoxLocalStack;
 
 import static jblox.scanner.TokenType.*;
 
-public class LocalsStackSim {
-  public static enum FunctionType {
+public class CompilerLocals {
+  public enum FunctionType {
     TYPE_SCRIPT,
     TYPE_FUNCTION,
     TYPE_INITIALIZER,
     TYPE_METHOD,
   }
 
-  private LocalsStackSim enclosing;
-  private LocalsStackSim.FunctionType type;
+  private CompilerLocals enclosing;
+  private FunctionType type;
   private Function function;
-  private LoxStack locals;
+  private LoxLocalStack locals;
   private Upvalue[] upvalues;
   private int scopeDepth;
 
-  //LocalsStackSim(Props, LocalsStackSim, LocalsStackSim.FunctionType)
-  public LocalsStackSim(
-    Props properties, LocalsStackSim enclosing,
-    LocalsStackSim.FunctionType type
+  //CompilerLocals(Props, CompilerLocals, FunctionType)
+  public CompilerLocals(
+    Props properties, CompilerLocals enclosing, FunctionType type
   ) {
     this(properties, enclosing, type, null);
   }
 
-  //LocalsStackSim(Props, LocalsStackSim, LocalsStackSim.FunctionType, String)
-  public LocalsStackSim(
-    Props properties, LocalsStackSim enclosing,
-    LocalsStackSim.FunctionType type, String functionName
+  //CompilerLocals(Props, CompilerLocals, FunctionType, String)
+  public CompilerLocals(
+    Props properties, CompilerLocals enclosing, FunctionType type,
+    String functionName
   ) {
     this.enclosing = enclosing;
     this.type = type;
 
     function = new Function(functionName);
-    locals = new LoxStack(properties.getInt("MAX_LOCALS"));
+    locals = new LoxLocalStack();
     upvalues = new Upvalue[properties.getInt("MAX_STACK")];
     scopeDepth = 0;
 
     //Block out stack slot zero for the function being called.
     Token token;
 
-    if (type != LocalsStackSim.FunctionType.TYPE_FUNCTION)
+    if (type != FunctionType.TYPE_FUNCTION)
       token = new Token(null, "this", null, -1);
     else
       token = new Token(null, "", null, -1);
 
-    push(new Local(token, 0));
+    locals.push(new Local(token, 0));
   }
 
   //enclosing()
-  public LocalsStackSim enclosing() {
+  public CompilerLocals enclosing() {
     return enclosing;
   }
 
   //type()
-  public LocalsStackSim.FunctionType type() {
+  public FunctionType type() {
     return type;
   }
 
@@ -78,34 +77,14 @@ public class LocalsStackSim {
     this.scopeDepth = scopeDepth;
   }
 
-  //count()
-  public int count() {
-    return locals.count();
-  }
-
-  //push(Local)
-  public void push(Local local) {
-    locals.push(local);
-  }
-
-  //peek()
-  public Local peek() {
-    return (Local)locals.peek();
-  }
-
-  //pop()
-  public void pop() {
-    locals.pop();
-  }
-
-  //get(int)
-  public Local get(int index) {
-    return (Local)locals.get(index);
+  //locals()
+  public LoxLocalStack locals(){
+    return locals;
   }
 
   //markInitialized()
   public void markInitialized() {
-    peek().setDepth(scopeDepth);
+    locals.peek().setDepth(scopeDepth);
   }
 
   //addUpvalue(Upvalue)
@@ -130,7 +109,7 @@ public class LocalsStackSim {
     StringBuilder sb = new StringBuilder();
 
     for (int i = 0; i < locals.count(); i++) {
-      Local local = (Local)locals.get(i);
+      Local local = locals.get(i);
       String lexeme = local.token().lexeme();
       int depth = local.depth();
 

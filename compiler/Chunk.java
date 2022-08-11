@@ -1,18 +1,20 @@
 package jblox.compiler;
 
-import jblox.util.LoxArray;
 import jblox.util.LoxByteArray;
+import jblox.util.LoxIntArray;
+import jblox.util.LoxValueArray;
+import jblox.vm.Value;
 
 public class Chunk {
   private LoxByteArray codes;
-  private LoxArray<Object> constants;
-  private LoxArray<Integer> lines;
+  private LoxValueArray constants;
+  private LoxIntArray lines;
 
   //Chunk()
   Chunk() {
     codes = new LoxByteArray();
-    constants = new LoxArray<>();
-    lines = new LoxArray<>();
+    constants = new LoxValueArray();
+    lines = new LoxIntArray();
   }
 
   //codes()
@@ -21,12 +23,12 @@ public class Chunk {
   }
 
   //constants()
-  public LoxArray constants() {
+  public LoxValueArray constants() {
     return constants;
   }
 
   //lines()
-  public LoxArray lines() {
+  public LoxIntArray lines() {
     return lines;
   }
 
@@ -36,8 +38,8 @@ public class Chunk {
     lines.add(line);
   }
 
-  //writeConstant(Object)
-  int writeConstant(Object constant) {
+  //writeConstant(Value)
+  int writeConstant(Value constant) {
     //return index of newly written constant
     return constants.add(constant);
   }

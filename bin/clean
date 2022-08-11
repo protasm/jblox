@@ -1,0 +1,5 @@
+#!/bin/bash
+
+DIR=/home/ubuntu/jblox
+
+find $DIR -name "*.class" -type f -delete
