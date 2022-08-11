@@ -1,5 +1,7 @@
 package jblox.main;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -10,6 +12,7 @@ import java.util.Properties;
 public final class Props {
   private String propsFile;
   private Properties properties;
+  private List<PropsObserver> observers;
 
   //Props(String)
   public Props(String propsFile) {
@@ -24,6 +27,8 @@ public final class Props {
     } catch (IOException e) {
       System.err.println("Failed to load properties file '" + propsFile + "'.");
     }
+
+    observers = new ArrayList<>();
   }
 
   //close()
@@ -44,6 +49,18 @@ public final class Props {
     return Boolean.parseBoolean(property);
   }
 
+  //toggleBool(String)
+  public boolean toggleBool(String key) {
+    boolean newState = !getBool(key);
+
+    properties.setProperty(key, String.valueOf(newState));
+
+    for (PropsObserver observer : observers)
+      observer.notifyPropertiesChanged();
+
+    return newState;
+  }
+
   //getInt(String)
   public int getInt(String key) {
     String property = properties.getProperty(key);
@@ -55,5 +72,10 @@ public final class Props {
     } catch (NumberFormatException e) {
       return -1;
     }
+  }
+
+  //registerObserver(PropsObserver)
+  public void registerObserver(PropsObserver observer) {
+    observers.add(observer);
   }
 }

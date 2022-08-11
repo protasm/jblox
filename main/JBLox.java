@@ -15,10 +15,12 @@ public class JBLox {
   private Props properties;
   private Debugger debugger;
   private VM vm;
+  private int exitCode;
+  private String exitMessage;
 
   //JBLox()
   public JBLox() {
-    properties = new Props("/home/ubuntu/jblox/props");
+    properties = new Props("/home/ubuntu/jblox/main/props");
     debugger = new Debugger(properties);
     vm = new VM(properties, debugger);
   }
@@ -30,8 +32,11 @@ public class JBLox {
 
       VM.InterpretResult result = vm.interpret(new String(source, Charset.defaultCharset()));
 
-      if (result == VM.InterpretResult.INTERPRET_COMPILE_ERROR) shutdown(65, null);
-      if (result == VM.InterpretResult.INTERPRET_RUNTIME_ERROR) shutdown(70, null);
+      if (result == VM.InterpretResult.INTERPRET_COMPILE_ERROR)
+        shutdown(65, null);
+
+      if (result == VM.InterpretResult.INTERPRET_RUNTIME_ERROR)
+        shutdown(70, null);
     } catch (FileNotFoundException f) {
       shutdown(1, "File not found: " + path);
     } catch (IOException i) {
@@ -44,21 +49,27 @@ public class JBLox {
     InputStreamReader input = new InputStreamReader(System.in);
     BufferedReader reader = new BufferedReader(input);
 
-    int exitCode = 1;
-    String exitMessage = "Unknown error";
-
     for (;;) {
       System.out.print("> ");
 
       try {
         String line = reader.readLine();
 
-        if (line == null || line.equals("quit") || line.equals("q")) {
-          exitCode = 0;
-          exitMessage = null;
+        if (line == null) {
+          exitCode = 1;
+          exitMessage = "Unknown error";
 
           break;
         }
+
+       if (line.charAt(0) == ':') {
+         boolean continueREPL = handleREPLCommand(line.substring(1));
+
+         if (continueREPL)
+           continue;
+         else
+           break;
+       }
 
         VM.InterpretResult result = vm.interpret(line);
       } catch (IOException e) {
@@ -79,13 +90,74 @@ public class JBLox {
     shutdown(exitCode, exitMessage);
   }
 
+  //handleREPLCommand(String)
+  private boolean handleREPLCommand(String command) {
+    boolean continueREPL = true; //continue by default
+
+    if (command.equals("quit") || command.equals("q")) {
+      exitCode = 0;
+      exitMessage = "Goodbye.";
+
+      continueREPL = false;
+    } else if (command.equals("debug")) {
+      System.out.println("Master: " + properties.getBool("DEBUG_MASTER"));
+      System.out.println("Print Stack: " + properties.getBool("DEBUG_PRINT_STACK"));
+      System.out.println("Trace Execution: " + properties.getBool("DEBUG_TRACE_EXECUTION"));
+      System.out.println("Print Progress: " + properties.getBool("DEBUG_PRINT_PROGRESS"));
+      System.out.println("Print Constants: " + properties.getBool("DEBUG_PRINT_CONSTANTS"));
+      System.out.println("Print Locals: " + properties.getBool("DEBUG_PRINT_LOCALS"));
+      System.out.println("Print Source: " + properties.getBool("DEBUG_PRINT_SOURCE"));
+    } else if (command.equals("master"))
+      System.out.println(
+        "Master " +
+        (properties.toggleBool("DEBUG_MASTER") ? "ON" : "OFF")
+      );
+    else if (command.equals("printstack"))
+      System.out.println(
+        "Print Stack " +
+        (properties.toggleBool("DEBUG_PRINT_STACK") ? "ON" : "OFF")
+      );
+    else if (command.equals("traceexecution"))
+      System.out.println(
+        "Trace Execution " +
+        (properties.toggleBool("DEBUG_TRACE_EXECUTION") ? "ON" : "OFF")
+      );
+    else if (command.equals("printprogress"))
+      System.out.println(
+        "Print Progress " +
+        (properties.toggleBool("DEBUG_PRINT_PROGRESS") ? "ON" : "OFF")
+      );
+    else if (command.equals("printconstants"))
+      System.out.println(
+        "Print Constants " +
+        (properties.toggleBool("DEBUG_PRINT_CONSTANTS") ? "ON" : "OFF")
+      );
+    else if (command.equals("printlocals"))
+      System.out.println(
+        "Print Locals " +
+        (properties.toggleBool("DEBUG_PRINT_LOCALS") ? "ON" : "OFF")
+      );
+    else if (command.equals("printsource"))
+      System.out.println(
+        "Print Source " +
+        (properties.toggleBool("DEBUG_PRINT_SOURCE") ? "ON" : "OFF")
+      );
+    else
+      System.out.println("Unknown REPL command: '" + command + "'");
+
+    return continueREPL;
+  }
+
   //shutdown(int, String)
   private void shutdown(int code, String message) {
     properties.close();
 
-    if (code == 0)
-      System.exit(0);
-    else {
+    if (code == 0) {
+      if (message != null)
+        System.out.println(message);
+
+        System.exit(code);
+    } else {
       if (message != null)
         System.err.println(message);
 
