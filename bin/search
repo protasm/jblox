@@ -1,5 +1,5 @@
 #!/bin/bash
 
-DIR=/home/ubuntu/jblox
+DIR="$HOME/jblox"
 
 grep --include=\*.java -rn $DIR -e "$1"

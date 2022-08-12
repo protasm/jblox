@@ -1,1 +1,1 @@
-java -Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=y jblox.JBLox $1
+java -Xdebug -Xrunjdwp:transport=dt_socket,address=8000,server=y,suspend=y jblox.main.JBLox $1

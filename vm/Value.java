@@ -18,10 +18,7 @@ public class Value {
   }
 
   private ValueType type;
-  private boolean boolValue;
-  private double numValue;
-  private Object objValue;
-  private String strValue;
+  private Object value;
 
   //Value()
   public Value() {
@@ -29,28 +26,28 @@ public class Value {
   }
 
   //Value(boolean)
-  public Value(boolean boolValue) {
-    this.boolValue = boolValue;
+  public Value(boolean value) {
+    this.value = value;
 
     type = ValueType.VAL_BOOL;
   }
 
   //Value(double)
-  public Value(double numValue) {
-    this.numValue = numValue;
+  public Value(double value) {
+    this.value = value;
 
     type = ValueType.VAL_NUMBER;
   }
 
   //Value(Object)
-  public Value(ValueType type, Object objValue) {
+  public Value(ValueType type, Object value) {
     this.type = type;
-    this.objValue = objValue;
+    this.value = value;
   }
 
   //Value(String)
-  public Value(String strValue) {
-    this.strValue = strValue;
+  public Value(String value) {
+    this.value = value;
 
     type = ValueType.VAL_STRING;
   }
@@ -62,47 +59,47 @@ public class Value {
 
   //asBool()
   public boolean asBool() {
-    return boolValue;
+    return (boolean)value;
   }
 
   //asBoundMethod()
   public BoundMethod asBoundMethod() {
-    return (BoundMethod)objValue;
+    return (BoundMethod)value;
   }
 
   //asClosure()
   public Closure asClosure() {
-    return (Closure)objValue;
+    return (Closure)value;
   }
 
   //asFunction()
   public Function asFunction() {
-    return (Function)objValue;
+    return (Function)value;
   }
 
   //asLoxClass()
   public LoxClass asLoxClass() {
-    return (LoxClass)objValue;
+    return (LoxClass)value;
   }
 
   //asLoxInstance()
   public LoxInstance asLoxInstance() {
-    return (LoxInstance)objValue;
+    return (LoxInstance)value;
   }
 
   //asNativeFn()
   public NativeFn asNativeFn() {
-    return (NativeFn)objValue;
+    return (NativeFn)value;
   }
 
   //asNumber()
   public double asNumber() {
-    return numValue;
+    return (double)value;
   }
 
   //asString()
   public String asString() {
-    return strValue;
+    return (String)value;
   }
 
   //isBool()
@@ -156,21 +153,21 @@ public class Value {
   }
 
   //equals()
-  public boolean equals(Value otherValue) {
-    if (type != otherValue.type())
+  public boolean equals(Value other) {
+    if (type != other.type())
       return false;
 
     switch(type) {
       case VAL_BOOL:
-        return asBool() == otherValue.asBool();
+        return asBool() == other.asBool();
       case VAL_NIL:
         return true;
       case VAL_NUMBER:
-        return asNumber() == otherValue.asNumber();
+        return asNumber() == other.asNumber();
       case VAL_STRING:
-        return asString().equals(otherValue.asString());
+        return asString().equals(other.asString());
       default:
-        return otherValue == this;
+        return other == this;
     }
   }
 
@@ -178,17 +175,14 @@ public class Value {
   @Override
   public String toString() {
     if (type == ValueType.VAL_BOOL)
-      return String.valueOf(boolValue);
+      return String.valueOf(value);
     if (type == ValueType.VAL_NIL)
       return "nil";
     else if (type == ValueType.VAL_NUMBER)
-      if(numValue == (long)numValue)
-        return String.format("%d",(long)numValue);
-      else
-        return String.format("%s",numValue);
+      return String.format("%s",value);
     else if (type == ValueType.VAL_STRING)
-      return strValue;
+      return (String)value;
     else
-      return objValue.toString();
+      return value.toString();
   }
 }
