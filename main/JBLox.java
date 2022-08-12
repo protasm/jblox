@@ -57,20 +57,20 @@ public class JBLox {
 
         if (line == null) {
           exitCode = 1;
-          exitMessage = "Unknown error";
+          exitMessage = "Unknown error: null input line.";
 
           break;
         }
 
-       if (line.charAt(0) == ':') {
-         boolean continueREPL = handleREPLCommand(line.substring(1));
-
-         if (continueREPL)
+       //treat line prefixed with ':' as a REPL command
+       if (line.length() > 0 && line.charAt(0) == ':') {
+         if (handleREPLCommand(line.substring(1)))
            continue;
          else
            break;
        }
 
+        //send line to VM for interpreting
         VM.InterpretResult result = vm.interpret(line);
       } catch (IOException e) {
         exitCode = 1;
@@ -105,8 +105,12 @@ public class JBLox {
       System.out.println("Trace Execution: " + properties.getBool("DEBUG_TRACE_EXECUTION"));
       System.out.println("Print Progress: " + properties.getBool("DEBUG_PRINT_PROGRESS"));
       System.out.println("Print Constants: " + properties.getBool("DEBUG_PRINT_CONSTANTS"));
+      System.out.println("Print Globals: " + properties.getBool("DEBUG_PRINT_GLOBALS"));
       System.out.println("Print Locals: " + properties.getBool("DEBUG_PRINT_LOCALS"));
       System.out.println("Print Source: " + properties.getBool("DEBUG_PRINT_SOURCE"));
+      System.out.println("Print OpCode: " + properties.getBool("DEBUG_PRINT_OPCODE"));
+      System.out.println("Print Code: " + properties.getBool("DEBUG_PRINT_CODE"));
+      System.out.println("Print Codes: " + properties.getBool("DEBUG_PRINT_CODES"));
     } else if (command.equals("master"))
       System.out.println(
         "Master " +
@@ -132,6 +136,11 @@ public class JBLox {
         "Print Constants " +
         (properties.toggleBool("DEBUG_PRINT_CONSTANTS") ? "ON" : "OFF")
       );
+    else if (command.equals("printglobals"))
+      System.out.println(
+        "Print Globals " +
+        (properties.toggleBool("DEBUG_PRINT_GLOBALS") ? "ON" : "OFF")
+      );
     else if (command.equals("printlocals"))
       System.out.println(
         "Print Locals " +
@@ -141,6 +150,21 @@ public class JBLox {
       System.out.println(
         "Print Source " +
         (properties.toggleBool("DEBUG_PRINT_SOURCE") ? "ON" : "OFF")
+      );
+    else if (command.equals("printopcode"))
+      System.out.println(
+        "Print OpCode " +
+        (properties.toggleBool("DEBUG_PRINT_OPCODE") ? "ON" : "OFF")
+      );
+    else if (command.equals("printcode"))
+      System.out.println(
+        "Print Code " +
+        (properties.toggleBool("DEBUG_PRINT_CODE") ? "ON" : "OFF")
+      );
+    else if (command.equals("printcodes"))
+      System.out.println(
+        "Print Codes " +
+        (properties.toggleBool("DEBUG_PRINT_CODES") ? "ON" : "OFF")
       );
     else
       System.out.println("Unknown REPL command: '" + command + "'");

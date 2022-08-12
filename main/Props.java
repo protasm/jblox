@@ -33,12 +33,17 @@ public final class Props {
 
   //close()
   public void close() {
+    store();
+  }
+
+  //store()
+  private void store() {
     try (OutputStream out = new FileOutputStream(propsFile)) {
       properties.store(out, "---No Comment---");
 
       out.close();
     } catch (IOException e) {
-      System.err.println("Failed to close properties file '" + propsFile + "'.");
+      System.err.println("Failed to store properties file '" + propsFile + "'.");
     }
   }
 
@@ -54,6 +59,8 @@ public final class Props {
     boolean newState = !getBool(key);
 
     properties.setProperty(key, String.valueOf(newState));
+
+    store();
 
     for (PropsObserver observer : observers)
       observer.notifyPropertiesChanged();

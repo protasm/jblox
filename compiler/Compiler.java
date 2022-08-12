@@ -5,6 +5,7 @@ import java.util.Map;
 
 import jblox.debug.Debugger;
 import jblox.main.Props;
+import jblox.main.PropsObserver;
 import jblox.parser.ParseRule;
 import jblox.parser.Parser;
 import jblox.parser.parselet.*;
@@ -19,7 +20,7 @@ import static jblox.compiler.OpCode.*;
 import static jblox.parser.Parser.Precedence.*;
 import static jblox.scanner.TokenType.*;
 
-public class Compiler {
+public class Compiler implements PropsObserver {
   private Props properties;
   private Debugger debugger;
   private Scanner scanner;
@@ -27,6 +28,8 @@ public class Compiler {
   private Parser parser;
   private CompilerLocals currentLocals;
   private ClassCompiler currentClass;
+
+  //Cached properties
   private boolean debugMaster;
   private boolean debugPrintProgress;
   private boolean debugPrintCode;
@@ -36,9 +39,9 @@ public class Compiler {
     this.properties = properties;
     this.debugger = debugger;
 
-    debugMaster = properties.getBool("DEBUG_MASTER");
-    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
-    debugPrintCode = debugMaster && properties.getBool("DEBUG_PRINT_CODE");
+    properties.registerObserver(this);
+
+    updateCachedProperties();
 
     if (debugPrintProgress) debugger.printProgress("Initializing compiler....");
 
@@ -941,5 +944,17 @@ public class Compiler {
     register(TOKEN_WHILE,         null,                   null,                 PREC_NONE);
     register(TOKEN_ERROR,         null,                   null,                 PREC_NONE);
     register(TOKEN_EOF,           null,                   null,                 PREC_NONE);
+  }
+
+  //notifyPropertiesChanged()
+  public void notifyPropertiesChanged() {
+    updateCachedProperties();
+  }
+
+  //updateCachedProperties()
+  private void updateCachedProperties() {
+    debugMaster = properties.getBool("DEBUG_MASTER");
+    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
+    debugPrintCode = debugMaster && properties.getBool("DEBUG_PRINT_CODE");
   }
 }

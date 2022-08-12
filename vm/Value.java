@@ -179,8 +179,13 @@ public class Value {
   public String toString() {
     if (type == ValueType.VAL_BOOL)
       return String.valueOf(boolValue);
+    if (type == ValueType.VAL_NIL)
+      return "nil";
     else if (type == ValueType.VAL_NUMBER)
-      return String.valueOf(numValue);
+      if(numValue == (long)numValue)
+        return String.format("%d",(long)numValue);
+      else
+        return String.format("%s",numValue);
     else if (type == ValueType.VAL_STRING)
       return strValue;
     else

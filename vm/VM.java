@@ -5,6 +5,7 @@ import jblox.compiler.Compiler;
 import jblox.compiler.Function;
 import jblox.debug.Debugger;
 import jblox.main.Props;
+import jblox.main.PropsObserver;
 import jblox.nativefn.NativeClock;
 import jblox.nativefn.NativeFn;
 import jblox.util.LoxArray;
@@ -18,7 +19,7 @@ import jblox.vm.Value.ValueType;
 
 import static jblox.compiler.OpCode.*;
 
-public class VM {
+public class VM implements PropsObserver {
   //InterpretResult
   public enum InterpretResult {
     INTERPRET_OK,
@@ -43,21 +44,24 @@ public class VM {
   private LoxValueStack stack;
   private LoxCallFrameStack frames;
   private String initString;
+  private Upvalue openUpvalues; //linked list
+
+  //Cached properties
   private boolean debugMaster;
   private boolean debugPrintProgress;
   private boolean debugTraceExecution;
-  private Upvalue openUpvalues; //linked list
 
   //VM()
   public VM(Props properties, Debugger debugger) {
     this.properties = properties;
     this.debugger = debugger;
 
-    debugMaster = properties.getBool("DEBUG_MASTER");
-    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
-    debugTraceExecution = debugMaster && properties.getBool("DEBUG_TRACE_EXECUTION");
+    properties.registerObserver(this);
 
-    if (debugPrintProgress) debugger.printProgress("Initializing VM....");
+    updateCachedProperties();
+
+    if (debugPrintProgress)
+      debugger.printProgress("Initializing VM....");
 
     compiler = new Compiler(properties, debugger);
     globals = new LoxValueMap();
@@ -774,5 +778,17 @@ public class VM {
 
         break;
     } //switch
+  }
+
+  //notifyPropertiesChanged()
+  public void notifyPropertiesChanged() {
+    updateCachedProperties();
+  }
+
+  //updateCachedProperties()
+  private void updateCachedProperties() {
+    debugMaster = properties.getBool("DEBUG_MASTER");
+    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
+    debugTraceExecution = debugMaster && properties.getBool("DEBUG_TRACE_EXECUTION");
   }
 }

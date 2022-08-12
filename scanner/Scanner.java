@@ -7,10 +7,11 @@ import java.util.Map;
 
 import jblox.debug.Debugger;
 import jblox.main.Props;
+import jblox.main.PropsObserver;
 
 import static jblox.scanner.TokenType.*;
 
-public class Scanner {
+public class Scanner implements PropsObserver {
   private Props properties;
   private Debugger debugger;
   private static final Map<String, TokenType> keywords;
@@ -20,6 +21,8 @@ public class Scanner {
   private int current;
   private int line;
   private int nextToken;
+
+  //Cached properties
   private boolean debugMaster;
   private boolean debugPrintProgress;
   private boolean debugPrintSource;
@@ -50,9 +53,9 @@ public class Scanner {
     this.properties = properties;
     this.debugger = debugger;
 
-    debugMaster = properties.getBool("DEBUG_MASTER");
-    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
-    debugPrintSource = debugMaster && properties.getBool("DEBUG_PRINT_SOURCE");
+    properties.registerObserver(this);
+
+    updateCachedProperties();
 
     if (debugPrintProgress) debugger.printProgress("Initializing scanner....");
   }
@@ -264,5 +267,17 @@ public class Scanner {
     String text = source.substring(start, current);
 
     tokens.add(new Token(type, text, literal, line));
+  }
+
+  //notifyPropertiesChanged()
+  public void notifyPropertiesChanged() {
+    updateCachedProperties();
+  }
+
+  //updateCachedProperties()
+  private void updateCachedProperties() {
+    debugMaster = properties.getBool("DEBUG_MASTER");
+    debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
+    debugPrintSource = debugMaster && properties.getBool("DEBUG_PRINT_SOURCE");
   }
 }

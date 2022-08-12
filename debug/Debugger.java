@@ -6,18 +6,32 @@ import jblox.compiler.Chunk;
 import jblox.compiler.Function;
 import jblox.compiler.CompilerLocals;
 import jblox.main.Props;
+import jblox.main.PropsObserver;
 import jblox.util.LoxValueMap;
 import jblox.util.LoxStack;
 import jblox.vm.CallFrame;
 
 import static jblox.compiler.OpCode.*;
 
-public class Debugger {
+public class Debugger implements PropsObserver {
   private Props properties;
+
+  //Cached properties
+  private boolean printCodes;
+  private boolean printConstants;
+  private boolean printGlobals;
+  private boolean printLines;
+  private boolean printLocals;
+  private boolean printOpCode;
+  private boolean printStack;
 
   //Debugger(Props)
   public Debugger(Props properties) {
     this.properties = properties;
+
+    properties.registerObserver(this);
+
+    updateCachedProperties();
   }
 
   //printProgress(String)
@@ -29,15 +43,15 @@ public class Debugger {
   public void printSource(String source) {
     printBanner("source");
 
-    System.out.println(source);
+    System.out.println((source.length() == 0) ? "[ no source ]" : source);
   }
 
   //traceExecution(CallFrame, LoxMap, LoxStack)
   public void traceExecution(CallFrame frame, LoxValueMap globals, LoxStack stack) {
-    if (properties.getBool("DEBUG_PRINT_GLOBALS"))
+    if (printGlobals)
       System.out.println("Globals: " + globals);
 
-    if (properties.getBool("DEBUG_PRINT_STACK"))
+    if (printStack)
       System.out.println("          " + stack);
 
     disassembleInstruction(frame.closure().function().chunk(), frame.ip());
@@ -45,17 +59,17 @@ public class Debugger {
 
   //disassembleChunk(Chunk, CompilerLocals, String)
   public void disassembleChunk(Chunk chunk, CompilerLocals locals, String name) {
-    if (properties.getBool("DEBUG_PRINT_CODES")) {
+    if (printCodes) {
       System.out.println("Codes: " + chunk.codes());
 
-      if (properties.getBool("DEBUG_PRINT_LINES"))
+      if (printLines)
         System.out.println("Lines: " + chunk.lines());
     }
 
-    if (properties.getBool("DEBUG_PRINT_CONSTANTS"))
+    if (printConstants)
       System.out.println("Constants: " + chunk.constants());
 
-    if (properties.getBool("DEBUG_PRINT_LOCALS"))
+    if (printLocals)
       System.out.println("Locals: " + locals);
 
     printBanner(name);
@@ -82,7 +96,7 @@ public class Debugger {
     else
       System.out.print(String.format("%4d ", chunk.lines().get(offset)));
 
-    if (properties.getBool("DEBUG_PRINT_OPCODE"))
+    if (printOpCode)
       System.out.print("(" + String.format("0x%02X", instruction) + ") ");
 
     switch (instruction) {
@@ -271,5 +285,21 @@ public class Debugger {
     byte lo = (byte)chunk.codes().get(offset + 2);
 
     return (short)(((hi & 0xFF) << 8) | (lo & 0xFF));
+  }
+
+  //notifyPropertiesChanged()
+  public void notifyPropertiesChanged() {
+    updateCachedProperties();
+  }
+
+  //updateCachedProperties()
+  private void updateCachedProperties() {
+    printCodes = properties.getBool("DEBUG_PRINT_CODES");
+    printConstants = properties.getBool("DEBUG_PRINT_CONSTANTS");
+    printGlobals = properties.getBool("DEBUG_PRINT_GLOBALS");
+    printLines = properties.getBool("DEBUG_PRINT_LINES");
+    printLocals = properties.getBool("DEBUG_PRINT_LOCALS");
+    printOpCode = properties.getBool("DEBUG_PRINT_OPCODE");
+    printStack = properties.getBool("DEBUG_PRINT_STACK");
   }
 }
