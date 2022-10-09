@@ -39,7 +39,7 @@ public class Scanner implements PropsObserver {
     keywords.put("if",     TOKEN_IF);
     keywords.put("nil",    TOKEN_NIL);
     keywords.put("or",     TOKEN_OR);
-    keywords.put("print",  TOKEN_PRINT);
+    //keywords.put("print",  TOKEN_PRINT);
     keywords.put("return", TOKEN_RETURN);
     keywords.put("super",  TOKEN_SUPER);
     keywords.put("this",   TOKEN_THIS);

@@ -1,6 +1,6 @@
 package jblox.compiler;
 
-public class Function {
+public class Function implements HasArity {
   private String name;
   private int arity;
   private int upvalueCount;
@@ -21,6 +21,7 @@ public class Function {
   }
 
   //arity()
+  @Override
   public int arity() {
     return arity;
   }

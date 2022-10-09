@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class LoxInstance {
   private LoxClass klass;
-  private Map<String, Value> fields;
+  private Map<String, Object> fields;
 
   //LoxInstance()
   public LoxInstance(LoxClass klass) {
@@ -20,7 +20,7 @@ public class LoxInstance {
   }
 
   //fields()
-  public Map<String, Value> fields() {
+  public Map<String, Object> fields() {
     return fields;
   }
 

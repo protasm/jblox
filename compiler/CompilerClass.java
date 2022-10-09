@@ -1,17 +1,17 @@
 package jblox.compiler;
 
-public class ClassCompiler {
-  private ClassCompiler enclosing;
+public class CompilerClass {
+  private CompilerClass enclosing;
   private boolean hasSuperclass;
 
-  //ClassCompiler(ClassCompiler, boolean)
-  public ClassCompiler(ClassCompiler enclosing, boolean hasSuperclass) {
+  //CompilerClass(CompilerClass, boolean)
+  public CompilerClass(CompilerClass enclosing, boolean hasSuperclass) {
     this.enclosing = enclosing;
     this.hasSuperclass = hasSuperclass;
   }
 
   //enclosing()
-  public ClassCompiler enclosing() {
+  public CompilerClass enclosing() {
     return enclosing;
   }
 

@@ -12,8 +12,6 @@ import jblox.parser.parselet.*;
 import jblox.scanner.Scanner;
 import jblox.scanner.Token;
 import jblox.scanner.TokenType;
-import jblox.vm.Value;
-import jblox.vm.Value.ValueType;
 
 import static jblox.compiler.CompilerLocals.FunctionType.*;
 import static jblox.compiler.OpCode.*;
@@ -27,7 +25,7 @@ public class Compiler implements PropsObserver {
   private Map<TokenType, ParseRule> typeToRule;
   private Parser parser;
   private CompilerLocals currentLocals;
-  private ClassCompiler currentClass;
+  private CompilerClass currentClass;
 
   //Cached properties
   private boolean debugMaster;
@@ -57,7 +55,7 @@ public class Compiler implements PropsObserver {
   }
 
   //currentClass()
-  public ClassCompiler currentClass() {
+  public CompilerClass currentClass() {
     return currentClass;
   }
 
@@ -65,7 +63,9 @@ public class Compiler implements PropsObserver {
   public Function compile(String source) {
     parser = new Parser();
 
-    currentLocals = new CompilerLocals(properties, null, TYPE_SCRIPT);
+    currentLocals = new CompilerLocals(
+      null, TYPE_SCRIPT, properties.getInt("MAX_SIGNED_BYTE")
+    );
 
     scanner.scan(source);
 
@@ -153,7 +153,7 @@ public class Compiler implements PropsObserver {
 
     emitByte(OP_LOOP);
 
-    int offset = currentChunk().codes().count() - loopStart + 2;
+    int offset = currentChunk().codesCount() - loopStart + 2;
 
     if (offset > maxLoop) error("Loop body too large.");
 
@@ -168,7 +168,7 @@ public class Compiler implements PropsObserver {
     emitByte((byte)0xFF);
     emitByte((byte)0xFF);
 
-    return currentChunk().codes().count() - 2;
+    return currentChunk().codesCount() - 2;
   }
 
   //emitReturn()
@@ -182,12 +182,11 @@ public class Compiler implements PropsObserver {
     emitByte(OP_RETURN);
   }
 
-  //makeConstant(Value)
-  int makeConstant(Value value) {
-    int maxConst = properties.getInt("MAX_CONST");
+  //makeConstant(Object)
+  int makeConstant(Object value) {
     int index = currentChunk().writeConstant(value);
 
-    if (index > maxConst) {
+    if (index > properties.getInt("MAX_SIGNED_SHORT")) {
       error("Too many constants in one chunk.");
 
       return 0;
@@ -197,8 +196,8 @@ public class Compiler implements PropsObserver {
     return index;
   }
 
-  //emitConstant(Value)
-  public void emitConstant(Value value) {
+  //emitConstant(Object)
+  public void emitConstant(Object value) {
     int index = makeConstant(value);
 
     emitByte(OP_CONSTANT);
@@ -209,7 +208,7 @@ public class Compiler implements PropsObserver {
   public void patchJump(int offset) {
     int maxJump = properties.getInt("MAX_JUMP");
     // -2 to adjust for the bytecode for the jump offset itself.
-    int jump = currentChunk().codes().count() - offset - 2;
+    int jump = currentChunk().codesCount() - offset - 2;
 
     if (jump > maxJump)
       error("Too much code to jump over.");
@@ -217,8 +216,8 @@ public class Compiler implements PropsObserver {
     byte hi = highByte((short)jump);
     byte lo = lowByte((short)jump);
 
-    currentChunk().codes().set(offset, hi);
-    currentChunk().codes().set(offset + 1, lo);
+    currentChunk().codes()[offset] =  hi;
+    currentChunk().codes()[offset + 1] = lo;
   }
 
   //currentChunk()
@@ -252,15 +251,15 @@ public class Compiler implements PropsObserver {
     currentLocals.setScopeDepth(currentLocals.scopeDepth() - 1);
 
     while (
-      currentLocals.locals().count() > 0 &&
-      currentLocals.locals().peek().depth() > currentLocals.scopeDepth()
+      currentLocals.localsCount() > 0 &&
+      currentLocals.peek().depth() > currentLocals.scopeDepth()
     ) {
-      if (currentLocals.locals().get(currentLocals.locals().count() - 1).isCaptured())
+      if (currentLocals.locals()[currentLocals.localsCount() - 1].isCaptured())
         emitByte(OP_CLOSE_UPVALUE);
       else
         emitByte(OP_POP);
 
-      currentLocals.locals().pop();
+      currentLocals.pop();
     }
   }
 
@@ -332,8 +331,7 @@ public class Compiler implements PropsObserver {
   //identifierConstant(Token)
   public int identifierConstant(Token token) {
     //return index of newly added constant
-    //return makeConstant(new Value(ValueType.VAL_STRING, token.lexeme()));
-    return makeConstant(new Value(token.lexeme()));
+    return makeConstant(token.lexeme());
   }
 
   //identifiersEqual(Token, Token)
@@ -343,8 +341,8 @@ public class Compiler implements PropsObserver {
 
   //resolveLocal(CompilerLocals, Token)
   private int resolveLocal(CompilerLocals locals, Token token) {
-    for (int i = locals.locals().count() - 1; i >= 0; i--) {
-      Local local = locals.locals().get(i);
+    for (int i = locals.localsCount() - 1; i >= 0; i--) {
+      Local local = locals.locals()[i];
 
       if (identifiersEqual(token, local.token())) {
         if (local.depth() == -1) //"sentinel" depth
@@ -360,7 +358,7 @@ public class Compiler implements PropsObserver {
 
   //addUpvalue(CompilerLocals, byte, boolean)
   private int addUpvalue(CompilerLocals locals, byte index, boolean isLocal) {
-    int maxStack = properties.getInt("MAX_STACK");
+    int maxClosureVariables = properties.getInt("MAX_SIGNED_BYTE");
     //isLocal controls whether closure captures a local variable or
     //an upvalue from the surrounding function
     int upvalueCount = locals.function().upvalueCount();
@@ -372,7 +370,7 @@ public class Compiler implements PropsObserver {
         return i;
     }
 
-    if (upvalueCount == maxStack) {
+    if (upvalueCount == maxClosureVariables) {
       error("Too many closure variables in function.");
 
       return 0;
@@ -390,7 +388,7 @@ public class Compiler implements PropsObserver {
     int local = resolveLocal(enclosing, token);
 
     if (local != -1) {
-      enclosing.locals().get(local).setIsCaptured(true);
+      enclosing.locals()[local].setIsCaptured(true);
 
       return addUpvalue(locals, (byte)local, true);
     }
@@ -405,17 +403,13 @@ public class Compiler implements PropsObserver {
 
   //addLocal(Token)
   private void addLocal(Token token) {
-    //TODO: replace maxStack with max value encodable by signed word
-    //THREEDO:  more intelligent limits everywhere
-    int maxStack = properties.getInt("MAX_STACK");
-
-    if (currentLocals.locals().count() >= maxStack) {
+    if (currentLocals.localsCount() >= properties.getInt("MAX_SIGNED_BYTE")) {
       error("Too many local variables in function.");
 
       return;
     }
 
-    currentLocals.locals().push(new Local(token, -1));
+    currentLocals.push(new Local(token, -1));
   }
 
   //declareVariable()
@@ -429,8 +423,8 @@ public class Compiler implements PropsObserver {
 
     //Start at the end of the locals array and work backward,
     //looking for an existing variable with the same name.
-    for (int i = currentLocals.locals().count() - 1; i >= 0; i--) {
-      Local local = currentLocals.locals().get(i);
+    for (int i = currentLocals.localsCount() - 1; i >= 0; i--) {
+      Local local = currentLocals.locals()[i];
 
       if (local.depth() != -1 && local.depth() < currentLocals.scopeDepth())
         break;
@@ -487,15 +481,15 @@ public class Compiler implements PropsObserver {
 
   //argumentList()
   public byte argumentList() {
-    int maxArity = properties.getInt("MAX_ARITY");
     byte argCount = 0;
+    int maxSignedByte = properties.getInt("MAX_SIGNED_BYTE");
 
     if (!check(TOKEN_RIGHT_PAREN))
       do {
         expression();
 
-        if (argCount == maxArity)
-          error("Can't have more than " + maxArity + " arguments.");
+        if (argCount == maxSignedByte)
+          error("Can't have more than " + maxSignedByte + " arguments.");
 
         argCount++;
       } while (match(TOKEN_COMMA));
@@ -520,8 +514,10 @@ public class Compiler implements PropsObserver {
 
   //function(CompilerLocals.FunctionType)
   private void function(CompilerLocals.FunctionType type) {
+    int maxSignedByte = properties.getInt("MAX_SIGNED_BYTE");
+
     CompilerLocals locals = new CompilerLocals(
-      properties, currentLocals, type, parser.previous().lexeme()
+      currentLocals, type, maxSignedByte, parser.previous().lexeme()
     );
     currentLocals = locals;
 
@@ -533,10 +529,8 @@ public class Compiler implements PropsObserver {
       do {
         locals.function().setArity(locals.function().arity() + 1);
 
-        int maxArity = properties.getInt("MAX_ARITY");
-
-        if (locals.function().arity() > maxArity)
-          errorAtCurrent("Can't have more than " + maxArity + " parameters.");
+        if (locals.function().arity() > maxSignedByte)
+          errorAtCurrent("Can't have more than " + maxSignedByte + " parameters.");
 
         int constantIdx = parseVariable("Expect parameter name.");
 
@@ -551,7 +545,7 @@ public class Compiler implements PropsObserver {
     Function function = endCompilation(); //sets currentLocals to enclosing
 
     emitByte(OP_CLOSURE);
-    emitWord((short)makeConstant(new Value(ValueType.VAL_FUNCTION, function)));
+    emitWord((short)makeConstant(function));
 
     for (int i = 0; i < function.upvalueCount(); i++) {
       emitByte((byte)(locals.getUpvalue(i).isLocal() ? 1 : 0));
@@ -594,7 +588,7 @@ public class Compiler implements PropsObserver {
 
     defineVariable(nameConstantIdx);
 
-    currentClass = new ClassCompiler(currentClass, false);
+    currentClass = new CompilerClass(currentClass, false);
 
     if (match(TOKEN_LESS)) {
       consume(TOKEN_IDENTIFIER, "Expect superclass name.");
@@ -686,7 +680,7 @@ public class Compiler implements PropsObserver {
     else
       expressionStatement();
 
-    int loopStart = currentChunk().codes().count();
+    int loopStart = currentChunk().codesCount();
 
      //Condition clause.
     int exitJump = -1;
@@ -705,7 +699,7 @@ public class Compiler implements PropsObserver {
     //Increment clause.
     if (!match(TOKEN_RIGHT_PAREN)) {
       int bodyJump = emitJump(OP_JUMP);
-      int incrementStart = currentChunk().codes().count();
+      int incrementStart = currentChunk().codesCount();
 
       expression();
 
@@ -759,13 +753,13 @@ public class Compiler implements PropsObserver {
   }
 
   //printStatement()
-  private void printStatement() {
-    expression();
+  //private void printStatement() {
+  //  expression();
 
-    consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+  //  consume(TOKEN_SEMICOLON, "Expect ';' after value.");
 
-    emitByte(OP_PRINT);
-  }
+  //  emitByte(OP_PRINT);
+  //}
 
   //returnStatement()
   private void returnStatement() {
@@ -788,7 +782,7 @@ public class Compiler implements PropsObserver {
 
   //whileStatement()
   private void whileStatement() {
-    int loopStart = currentChunk().codes().count();
+    int loopStart = currentChunk().codesCount();
 
     consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
 
@@ -823,7 +817,7 @@ public class Compiler implements PropsObserver {
         case TOKEN_FOR:
         case TOKEN_IF:
         case TOKEN_WHILE:
-        case TOKEN_PRINT:
+        //case TOKEN_PRINT:
         case TOKEN_RETURN:
           return;
 
@@ -852,9 +846,9 @@ public class Compiler implements PropsObserver {
 
   //statement()
   private void statement() {
-    if (match(TOKEN_PRINT))
-      printStatement();
-    else if (match(TOKEN_FOR))
+    //if (match(TOKEN_PRINT))
+      //printStatement();
+    if (match(TOKEN_FOR))
       forStatement();
     else if (match(TOKEN_IF))
       ifStatement();
@@ -935,7 +929,7 @@ public class Compiler implements PropsObserver {
     register(TOKEN_IF,            null,                   null,                 PREC_NONE);
     register(TOKEN_NIL,           new LiteralParselet(),  null,                 PREC_NONE);
     register(TOKEN_OR,            null,                   new OrParselet(),     PREC_OR);
-    register(TOKEN_PRINT,         null,                   null,                 PREC_NONE);
+    //register(TOKEN_PRINT,         null,                   null,                 PREC_NONE);
     register(TOKEN_RETURN,        null,                   null,                 PREC_NONE);
     register(TOKEN_SUPER,         new SuperParselet(),   null,                 PREC_NONE);
     register(TOKEN_THIS,          new ThisParselet(),     null,                 PREC_NONE);

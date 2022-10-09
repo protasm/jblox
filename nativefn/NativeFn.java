@@ -1,13 +1,16 @@
 package jblox.nativefn;
 
-import jblox.vm.Value;
+import jblox.compiler.HasArity;
 
-public abstract class NativeFn {
-  public abstract Value execute(Value[] args);
+public abstract class NativeFn implements HasArity {
+  protected int arity = 0;
 
-  //toString()
+  //arity()
   @Override
-  public String toString() {
-    return "<nativefn>";
+  public int arity() {
+    return arity;
   }
+
+  public abstract Object execute(Object[] args);
+  @Override public abstract String toString();
 }

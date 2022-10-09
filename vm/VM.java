@@ -1,21 +1,18 @@
 package jblox.vm;
 
+import java.lang.Math;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
+
 import jblox.compiler.Chunk;
 import jblox.compiler.Compiler;
 import jblox.compiler.Function;
+import jblox.compiler.HasArity;
 import jblox.debug.Debugger;
 import jblox.main.Props;
 import jblox.main.PropsObserver;
-import jblox.nativefn.NativeClock;
-import jblox.nativefn.NativeFn;
-import jblox.util.LoxArray;
-import jblox.util.LoxCallFrameStack;
-import jblox.util.LoxIntArray;
-import jblox.util.LoxMap;
-import jblox.util.LoxStack;
-import jblox.util.LoxValueMap;
-import jblox.util.LoxValueStack;
-import jblox.vm.Value.ValueType;
+import jblox.nativefn.*;
 
 import static jblox.compiler.OpCode.*;
 
@@ -40,9 +37,11 @@ public class VM implements PropsObserver {
   private Props properties;
   private Debugger debugger;
   private Compiler compiler;
-  private LoxValueMap globals;
-  private LoxValueStack stack;
-  private LoxCallFrameStack frames;
+  private Map<String, Object> globals;
+  private Object[] vStack; //Value stack
+  private int vStackCount;
+  private CallFrame[] fStack; //Frame stack
+  private int fStackCount;
   private String initString;
   private Upvalue openUpvalues; //linked list
 
@@ -64,20 +63,83 @@ public class VM implements PropsObserver {
       debugger.printProgress("Initializing VM....");
 
     compiler = new Compiler(properties, debugger);
-    globals = new LoxValueMap();
-    stack = new LoxValueStack();
-    frames = new LoxCallFrameStack();
+    globals = new HashMap<>();
+    vStack = new Object[properties.getInt("MAX_STACK")];
+    fStack = new CallFrame[properties.getInt("MAX_FRAMES")];
     initString = "init";
 
     defineNativeFn("clock", new NativeClock());
+    defineNativeFn("foo", new NativeFoo());
+    defineNativeFn("print", new NativePrint());
+    defineNativeFn("println", new NativePrintLn());
 
     reset();
   }
 
+  //fStackTop()
+  private int fStackTop() {
+    return fStackCount - 1;
+  }
+
+  //getFrame(int)
+  private CallFrame getFrame(int index) {
+    return fStack[index];
+  }
+
+  //peekFrame()
+  private CallFrame peekFrame() {
+    return fStack[fStackCount - 1];
+  }
+
+  //popFrame()
+  private CallFrame popFrame() {
+    return fStack[(fStackCount--) - 1];
+  }
+
+  //pushFrame(CallFrame)
+  private void pushFrame(CallFrame frame) {
+    fStack[fStackCount++] = frame;
+  }
+
+  //vStackTop()
+  private int vStackTop() {
+    return vStackCount - 1;
+  }
+
+  //getValue(int)
+  private Object getValue(int index) {
+    return vStack[index];
+  }
+
+  //peekValue()
+  private Object peekValue() {
+    return vStack[vStackCount - 1];
+  }
+
+  //peekNValues(int)
+  private Object peekNValues(int n) {
+    return vStack[vStackCount - n];
+  }
+
+  //popValue()
+  private Object popValue() {
+    return vStack[(vStackCount--) - 1];
+  }
+
+  //pushValue(Object)
+  private void pushValue(Object value) {
+    vStack[vStackCount++] = value;
+  }
+
+  //setValue(int, Object)
+  private void setValue(int index, Object value) {
+    vStack[index] = value;
+  }
+
   //reset()
   private void reset() {
-    stack.reset();
-    frames.reset();
+    vStackCount = 0;
+    fStackCount = 0;
     openUpvalues = null;
   }
 
@@ -86,13 +148,13 @@ public class VM implements PropsObserver {
     System.err.println("Runtime Error: " + message);
 
     for (String s : args)
-      System.out.println(s);
+      System.err.println(s);
 
-    for (int i = frames.count() - 1; i >= 0; i--) {
-      CallFrame frame = frames.get(i);
+    for (int i = fStackTop(); i >= 0; i--) {
+      CallFrame frame = getFrame(i);
       Function function = frame.closure().function();
-      LoxIntArray lines = function.chunk().lines();
-      int line = lines.get(frame.ip() - 1);
+      int[] lines = function.chunk().lines();
+      int line = lines[frame.ip() - 1];
 
       System.err.print("[line " + line + "] in ");
 
@@ -107,52 +169,45 @@ public class VM implements PropsObserver {
 
   //defineNativeFn(String, NativeFn)
   private void defineNativeFn(String name, NativeFn nativeFn) {
-    globals.put(name, new Value(ValueType.VAL_NATIVEFN, nativeFn));
+    globals.put(name, nativeFn);
   }
 
   //call(Closure, int)
   private boolean call(Closure closure, int argCount) {
-    int arity = closure.function().arity();
-
-    if (argCount != arity) {
-      runtimeError(
-        "Expected " + arity + " arguments but got " + argCount + "."
-      );
-
+    if (!checkArity(closure.function(), argCount))
       return false;
-    }
 
-    //CallFrame window on VM stack begins at slot
+    //CallFrame window on VM vStack begins at slot
     //occupied by function.
-    int base = stack.top() - argCount;
+    int base = vStackTop() - argCount;
     int maxFrames = properties.getInt("MAX_FRAMES");
 
-    if (frames.count() == maxFrames) {
+    if (fStackCount == maxFrames) {
       runtimeError("Stack overflow.");
 
       return false;
     }
 
-    CallFrame frame = new CallFrame(closure, base);
-    frames.push(frame);
+    pushFrame(new CallFrame(closure, base));
 
     return true;
   }
 
-  //callValue(Value, int)
-  private boolean callValue(Value callee, int argCount) {
-    if (callee.isBoundMethod()) {
-      BoundMethod bound = callee.asBoundMethod();
+  //callValue(Object, int)
+  private boolean callValue(Object callee, int argCount) {
+    //Bound Method
+    if (callee instanceof BoundMethod) {
+      BoundMethod bound = (BoundMethod)callee;
 
-      stack.set(stack.top() - argCount, bound.receiver());
+      setValue(vStackCount - argCount, bound.receiver());
 
       return call(bound.method(), argCount);
-    } else if (callee.isLoxClass()) {
-      LoxClass klass = callee.asLoxClass();
+    //Class
+    } else if (callee instanceof LoxClass) {
+      LoxClass klass = (LoxClass)callee;
       LoxInstance instance = new LoxInstance(klass);
-      Value value = new Value(ValueType.VAL_LOXINSTANCE, instance);
 
-      stack.set(stack.top() - argCount, value);
+      setValue(vStackTop() - argCount, instance);
 
       Closure initializer = klass.methods().get(initString);
 
@@ -165,21 +220,27 @@ public class VM implements PropsObserver {
       }
 
       return true;
-    } else if (callee.isClosure())
-      return call(callee.asClosure(), argCount);
-    else if (callee.isNativeFn()) {
-      NativeFn nativeFn = callee.asNativeFn();
-      Value[] args = new Value[argCount];
+    //Closure
+    } else if (callee instanceof Closure)
+      return call((Closure)callee, argCount);
+    //Native Function
+    else if (callee instanceof NativeFn) {
+      NativeFn nativeFn = (NativeFn)callee;
+
+      if (!checkArity(nativeFn, argCount))
+        return false;
+
+      Object[] args = new Object[argCount];
 
       for (int i = 0; i < argCount; i++)
-        args[i] = stack.get(stack.count() - argCount + i);
+        args[i] = peekNValues(argCount - i);
 
-      Value result = nativeFn.execute(args);
+      Object result = nativeFn.execute(args);
 
       //pop args plus native function
-      stack.truncate(stack.top() - argCount);
+      vStackCount = vStackTop() - argCount;
 
-      stack.push(result);
+      pushValue(result);
 
       return true;
     }
@@ -204,20 +265,20 @@ public class VM implements PropsObserver {
 
   //invoke(String, int)
   private boolean invoke(String name, int argCount) {
-    Value receiver = stack.get(stack.top() - argCount);
+    Object receiver = peekNValues(argCount + 1);
 
-    if (!(receiver.isLoxInstance())) {
+    if (!(receiver instanceof LoxInstance)) {
       runtimeError("Only instances have methods.");
 
       return false;
     }
 
-    LoxInstance instance = receiver.asLoxInstance();
+    LoxInstance instance = (LoxInstance)receiver;
 
     if (instance.fields().containsKey(name)) {
-      Value value = instance.fields().get(name);
+      Object value = instance.fields().get(name);
 
-      stack.set(stack.top() - argCount, value);
+      setValue(vStackTop() - argCount, value);
 
       return callValue(value, argCount);
     }
@@ -234,12 +295,12 @@ public class VM implements PropsObserver {
     }
 
     Closure method = klass.methods().get(name);
-    BoundMethod bound = new BoundMethod(stack.peek(), method);
-    Value value = new Value(ValueType.VAL_BOUNDMETHOD, bound);
+    BoundMethod bound = new BoundMethod(peekValue(), method);
+    Object value = bound;
 
-    stack.pop();
+    popValue();
 
-    stack.push(value);
+    pushValue(value);
 
     return true;
   }
@@ -277,7 +338,7 @@ public class VM implements PropsObserver {
     while (openUpvalues != null && openUpvalues.location() >= last) {
       Upvalue upvalue = openUpvalues;
 
-      upvalue.setClosedValue(stack.get(upvalue.location()));
+      upvalue.setClosedValue(getValue(upvalue.location()));
       upvalue.setLocation(-1);
 
       //after upvalue is closed, reset head of linked list
@@ -289,36 +350,37 @@ public class VM implements PropsObserver {
 
   //defineMethod(String)
   void defineMethod(String name) {
-    Closure method = stack.peek().asClosure();
-    LoxClass klass = stack.get(stack.top() - 1).asLoxClass();
+    Closure method = (Closure)peekValue();
+    LoxClass klass = (LoxClass)peekNValues(2);
 
     klass.methods().put(name, method);
 
-    stack.pop();
+    popValue();
   }
 
-  //isFalsey(Value)
-  boolean isFalsey(Value value) {
+  //isFalsey(Object)
+  boolean isFalsey(Object value) {
     //nil and false are falsey and every other value behaves like true.
-    return value.isNil() || (value.isBool() && !(value.asBool()));
+    return value == null || (value instanceof Boolean && !(boolean)value);
   }
 
   //concatenate()
   private void concatenate() {
-    String b = stack.pop().asString();
-    String a = stack.pop().asString();
+    String b = (String)popValue();
+    String a = (String)popValue();
 
-    //stack.push(new Value(ValueType.VAL_STRING, a + b));
-    stack.push(new Value(a + b));
+    pushValue(a + b);
   }
 
   //equate()
   private void equate() {
-    Value b = stack.pop();
-    Value a = stack.pop();
+    Object b = popValue();
+    Object a = popValue();
 
-    //stack.push(new Value(ValueType.VAL_BOOL, a.equals(b)));
-    stack.push(new Value(a.equals(b)));
+    if (a == null)
+      pushValue(b == null);
+    else
+      pushValue(a.equals(b));
   }
 
   //interpret(String)
@@ -332,9 +394,9 @@ public class VM implements PropsObserver {
       return InterpretResult.INTERPRET_COMPILE_ERROR;
 
     Closure closure = new Closure(function);
-    Value value = new Value(ValueType.VAL_CLOSURE, closure);
+    Object value = closure;
 
-    stack.push(value);
+    pushValue(value);
 
     call(closure, 0);
 
@@ -343,7 +405,7 @@ public class VM implements PropsObserver {
 
   //readByte(CallFrame)
   private byte readByte(CallFrame frame) {
-    return (byte)frame.closure().function().chunk().codes().get(frame.getAndIncrementIP());
+    return (byte)frame.closure().function().chunk().codes()[frame.getAndIncrementIP()];
   }
 
   //readWord(CallFrame)
@@ -357,45 +419,60 @@ public class VM implements PropsObserver {
   }
 
   //readConstant(CallFrame)
-  private Value readConstant(CallFrame frame) {
+  private Object readConstant(CallFrame frame) {
     short index = readWord(frame);
 
-    return frame.closure().function().chunk().constants().get(index);
+    return frame.closure().function().chunk().constants()[index];
   }
 
   //readString(CallFrame)
   private String readString(CallFrame frame) {
-    return readConstant(frame).asString();
+    return (String)readConstant(frame);
   }
 
   //run()
   private InterpretResult run() {
-    CallFrame frame = frames.peek();
+    CallFrame frame = peekFrame();
 
     //Bytecode dispatch loop.
     for (;;) {
-      if (debugTraceExecution)
-        debugger.traceExecution(frame, globals, stack);
+      if (debugTraceExecution) {
+        Object[] substack = Arrays.copyOfRange(vStack, 0, vStackCount);
+
+        debugger.traceExecution(frame, globals, substack);
+      }
 
       switch (readByte(frame)) {
-        case OP_CONSTANT: stack.push(readConstant(frame)); break;
-        //case OP_NIL:      stack.push(new Value(ValueType.VAL_NIL, null)); break;
-        case OP_NIL:      stack.push(new Value()); break;
-        //case OP_TRUE:     stack.push(new Value(ValueType.VAL_BOOL, true)); break;
-        case OP_TRUE:     stack.push(new Value(true)); break;
-        //case OP_FALSE:    stack.push(new Value(ValueType.VAL_BOOL, false)); break;
-        case OP_FALSE:    stack.push(new Value(false)); break;
-        case OP_POP:      stack.pop(); break;
+        case OP_CONSTANT:
+          pushValue(readConstant(frame));
+
+          break;
+        case OP_NIL:
+          pushValue(null);
+
+          break;
+        case OP_TRUE:
+          pushValue(true);
+
+          break;
+        case OP_FALSE:
+          pushValue(false);
+
+          break;
+        case OP_POP:
+          popValue();
+
+          break;
         case OP_GET_LOCAL:
           short glSlot = readWord(frame);
 
-          stack.push(stack.get(frame.base() + glSlot));
+          pushValue(getValue(frame.base() + glSlot));
 
           break;
         case OP_SET_LOCAL:
           short slSlot = readWord(frame);
 
-          stack.set(frame.base() + slSlot, stack.peek());
+          setValue(frame.base() + slSlot, peekValue());
 
           break;
         case OP_GET_GLOBAL:
@@ -404,17 +481,17 @@ public class VM implements PropsObserver {
           if (!globals.containsKey(ggKey))
             return error("Undefined variable '" + ggKey + "'.");
 
-          Value global = globals.get(ggKey);
+          Object global = globals.get(ggKey);
 
-          stack.push(global);
+          pushValue(global);
 
           break;
         case OP_DEFINE_GLOBAL:
           String dgKey = readString(frame);
 
-          globals.put(dgKey, stack.peek());
+          globals.put(dgKey, peekValue());
 
-          stack.pop();
+          popValue();
 
           break;
         case OP_SET_GLOBAL:
@@ -424,9 +501,9 @@ public class VM implements PropsObserver {
             return error("Undefined variable '" + sgKey + "'.");
 
           //Peek here, not pop; assignment is an expression,
-          //so we leave value stacked in case the assignment
+          //so we leave value vStacked in case the assignment
           //is nested inside a larger expression.
-          globals.put(sgKey, stack.peek());
+          globals.put(sgKey, peekValue());
 
           break;
         case OP_GET_UPVALUE:
@@ -434,9 +511,9 @@ public class VM implements PropsObserver {
           Upvalue guUpvalue = frame.closure().upvalues()[guSlot];
 
           if (guUpvalue.location() != -1) //i.e., open
-            stack.push(stack.get(guUpvalue.location()));
+            pushValue(getValue(guUpvalue.location()));
           else //i.e., closed
-            stack.push(guUpvalue.closedValue());
+            pushValue(guUpvalue.closedValue());
 
           break;
         case OP_SET_UPVALUE:
@@ -444,27 +521,27 @@ public class VM implements PropsObserver {
           Upvalue suUpvalue = frame.closure().upvalues()[suSlot];
 
           if (suUpvalue.location() != -1) //i.e., open
-            stack.set(suUpvalue.location(), stack.peek());
+            setValue(suUpvalue.location(), peekValue());
           else //i.e., closed
-            suUpvalue.setClosedValue(stack.peek());
+            suUpvalue.setClosedValue(peekValue());
 
           break;
         case OP_GET_PROPERTY:
-          Value gpValue = stack.peek();
+          Object gpValue = peekValue();
 
-          if (!(gpValue.isLoxInstance())) {
+          if (!(gpValue instanceof LoxInstance)) {
             runtimeError("Only instances have properties.");
 
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
           }
 
-          LoxInstance gpInstance = gpValue.asLoxInstance();
+          LoxInstance gpInstance = (LoxInstance)gpValue;
           String name = readString(frame);
 
           if (gpInstance.fields().containsKey(name)) {
-            stack.pop(); // Instance.
+            popValue(); // Instance.
 
-            stack.push(gpInstance.fields().get(name));
+            pushValue(gpInstance.fields().get(name));
 
             break;
           }
@@ -474,35 +551,38 @@ public class VM implements PropsObserver {
 
           break;
         case OP_SET_PROPERTY:
-          Value spValue = stack.get(stack.top() - 1);
+          Object spValue = peekNValues(2);
 
-          if (!(spValue.isLoxInstance())) {
+          if (!(spValue instanceof LoxInstance)) {
             runtimeError("Only instances have fields.");
 
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
           }
 
-          LoxInstance spInstance = spValue.asLoxInstance();
+          LoxInstance spInstance = (LoxInstance)spValue;
 
-          spInstance.fields().put(readString(frame), stack.peek());
+          spInstance.fields().put(readString(frame), peekValue());
 
           //pop value that was set plus instance object
-          Value setValue = stack.pop();
-          stack.pop();
+          Object setObject = popValue();
+          popValue();
 
-          //push value back on stack
-          stack.push(setValue);
+          //push value back on vStack
+          pushValue(setObject);
 
           break;
         case OP_GET_SUPER:
           String gsName = readString(frame);
-          LoxClass gsSuperclass = stack.pop().asLoxClass();
+          LoxClass gsSuperclass = (LoxClass)popValue();
 
           if (!bindMethod(gsSuperclass, gsName))
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
           break;
-        case OP_EQUAL: equate(); break;
+        case OP_EQUAL:
+          equate();
+
+          break;
         case OP_GREATER:
           if (!twoNumericOperands())
             return errorTwoNumbers();
@@ -548,22 +628,20 @@ public class VM implements PropsObserver {
 
           break;
         case OP_NOT:
-          //stack.push(new Value(ValueType.VAL_BOOL, isFalsey(stack.pop())));
-          stack.push(new Value(isFalsey(stack.pop())));
+          pushValue(isFalsey(popValue()));
 
           break;
         case OP_NEGATE:
           if (!oneNumericOperand())
             return errorOneNumber();
 
-          //stack.push(new Value(ValueType.VAL_NUMBER, -(stack.pop().asNumber())));
-          stack.push(new Value(-(stack.pop().asNumber())));
+          pushValue(-(double)popValue());
 
           break;
-        case OP_PRINT:
-          System.out.println(stack.pop());
+        //case OP_PRINT:
+        //  System.out.println(popValue());
 
-          break;
+        //  break;
         case OP_JUMP:
           short jumpOffset = readWord(frame);
 
@@ -573,7 +651,7 @@ public class VM implements PropsObserver {
         case OP_JUMP_IF_FALSE:
           short jumpIfFalseOffset = readWord(frame);
 
-          if (isFalsey(stack.peek()))
+          if (isFalsey(peekValue()))
             frame.setIP(frame.ip() + jumpIfFalseOffset);
 
           break;
@@ -585,12 +663,12 @@ public class VM implements PropsObserver {
           break;
         case OP_CALL:
           int callArgCount = readByte(frame);
-          Value callee = stack.get(stack.top() - callArgCount);
+          Object callee = getValue(vStackTop() - callArgCount);
 
           if (!callValue(callee, callArgCount))
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
-          frame = frames.peek();
+          frame = peekFrame();
 
           break;
         case OP_INVOKE:
@@ -600,25 +678,25 @@ public class VM implements PropsObserver {
           if (!invoke(invMethod, invArgCount))
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
-          frame = frames.peek();
+          frame = peekFrame();
 
           break;
         case OP_SUPER_INVOKE:
           String siMethod = readString(frame);
           int siArgCount = readByte(frame);
-          LoxClass siSuperclass = stack.pop().asLoxClass();
+          LoxClass siSuperclass = (LoxClass)popValue();
 
           if (!invokeFromClass(siSuperclass, siMethod, siArgCount))
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
 
-          frame = frames.peek();
+          frame = peekFrame();
 
           break;
         case OP_CLOSURE:
-          Function function = readConstant(frame).asFunction();
+          Function function = (Function)readConstant(frame);
           Closure closure = new Closure(function);
 
-          stack.push(new Value(ValueType.VAL_CLOSURE, closure));
+          pushValue(closure);
 
           for (int i = 0; i < closure.upvalueCount(); i++) {
             byte isLocal = readByte(frame);
@@ -632,53 +710,53 @@ public class VM implements PropsObserver {
 
           break;
         case OP_CLOSE_UPVALUE:
-          //close the upvalue at the top of the stack
-          closeUpvalues(stack.top());
+          //close the upvalue at the top of the vStack
+          closeUpvalues(vStackTop());
 
-          stack.pop();
+          popValue();
 
           break;
         case OP_RETURN:
-          Value result = stack.pop();
+          Object result = popValue();
 
           closeUpvalues(frame.base());
 
-          frames.pop();
+          popFrame();
 
-          if (frames.count() == 0) {
-            stack.pop();
+          if (fStackCount == 0) {
+            popValue();
 
             return InterpretResult.INTERPRET_OK;
           }
 
-          stack.truncate(frame.base());
+          vStackCount = frame.base();
 
-          stack.push(result);
+          pushValue(result);
 
-          frame = frames.peek();
+          frame = peekFrame();
 
           break;
         case OP_CLASS:
           LoxClass classLoxClass = new LoxClass(readString(frame));
-          Value classVal = new Value(ValueType.VAL_LOXCLASS, classLoxClass);
+          Object classVal = classLoxClass;
 
-          stack.push(classVal);
+          pushValue(classVal);
 
           break;
         case OP_INHERIT:
-          Value superclass = stack.get(stack.top() - 1);
+          Object superclass = peekNValues(2);
 
-          if (!(superclass.isLoxClass())) {
+          if (!(superclass instanceof LoxClass)) {
             runtimeError("Superclass must be a class.");
 
             return InterpretResult.INTERPRET_RUNTIME_ERROR;
           }
 
-          LoxClass subclass = stack.peek().asLoxClass();
+          LoxClass subclass = (LoxClass)peekValue();
 
-          subclass.inheritMethods(superclass.asLoxClass().methods());
+          subclass.inheritMethods(((LoxClass)superclass).methods());
 
-          stack.pop(); // Subclass.
+          popValue(); // Subclass.
 
           break;
         case OP_METHOD:
@@ -691,7 +769,7 @@ public class VM implements PropsObserver {
 
   //oneNumericOperand()
   private boolean oneNumericOperand() {
-    return stack.peek().isNumber();
+    return peekValue() instanceof Double;
   }
 
   //errorOneNumber()
@@ -701,12 +779,12 @@ public class VM implements PropsObserver {
 
   //twoNumericOperands()
   private boolean twoNumericOperands() {
-    Value first = stack.pop(); //temporarily pop
-    Value second = stack.peek();
+    Object first = popValue(); //temporarily pop
+    Object second = peekValue();
 
-    stack.push(first); //push back again
+    pushValue(first);
 
-    return first.isNumber() && second.isNumber();
+    return first instanceof Double && second instanceof Double;
   }
 
   //errorTwoNumbers()
@@ -716,12 +794,12 @@ public class VM implements PropsObserver {
 
   //twoStringOperands()
   private boolean twoStringOperands() {
-    Value first = stack.pop(); //temporarily pop
-    Value second = stack.peek();
+    Object first = popValue();
+    Object second = peekValue();
 
-    stack.push(first); //push back again
+    pushValue(first); //push back again
 
-    return first.isString() && second.isString();
+    return first instanceof String && second instanceof String;
   }
 
   //errorTwoStrings()
@@ -743,41 +821,58 @@ public class VM implements PropsObserver {
 
   //binaryOp(Operation)
   private void binaryOp(Operation op) {
-    double b = stack.pop().asNumber();
-    double a = stack.pop().asNumber();
+    double b = (double)popValue();
+    double a = (double)popValue();
 
     switch (op) {
       case OPERATION_PLUS:
-        //stack.push(new Value(ValueType.VAL_NUMBER, a + b));
-        stack.push(new Value(a + b));
+        pushValue(a + b);
 
         break;
       case OPERATION_SUBTRACT:
-        //stack.push(new Value(ValueType.VAL_NUMBER, a - b));
-        stack.push(new Value(a - b));
+        pushValue(a - b);
 
         break;
       case OPERATION_MULT:
-        //stack.push(new Value(ValueType.VAL_NUMBER, a * b));
-        stack.push(new Value(a * b));
+        pushValue(a * b);
 
         break;
       case OPERATION_DIVIDE:
-        //stack.push(new Value(ValueType.VAL_NUMBER, a / b));
-        stack.push(new Value(a / b));
+        pushValue(a / b);
 
         break;
       case OPERATION_GT:
-        //stack.push(new Value(ValueType.VAL_BOOL, a > b));
-        stack.push(new Value(a > b));
+        pushValue(a > b);
 
         break;
       case OPERATION_LT:
-        //stack.push(new Value(ValueType.VAL_BOOL, a < b));
-        stack.push(new Value(a < b));
+        pushValue(a < b);
 
         break;
     } //switch
+  }
+
+  //checkArity(HasArity, int)
+  private boolean checkArity(HasArity callee, int argCount) {
+    int arity = callee.arity();
+
+    if (arity < 0) {
+      if (argCount > Math.abs(arity)) {
+        runtimeError(
+          "Expected up to " + Math.abs(arity) + " argument(s) but got " + argCount + "."
+        );
+
+        return false;
+      }
+    } else if (argCount != arity) {
+      runtimeError(
+        "Expected " + arity + " arguments but got " + argCount + "."
+      );
+
+      return false;
+    }
+
+    return true;
   }
 
   //notifyPropertiesChanged()

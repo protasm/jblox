@@ -2,7 +2,6 @@ package jblox.compiler;
 
 import jblox.main.Props;
 import jblox.scanner.Token;
-import jblox.util.LoxLocalStack;
 
 import static jblox.scanner.TokenType.*;
 
@@ -17,28 +16,27 @@ public class CompilerLocals {
   private CompilerLocals enclosing;
   private FunctionType type;
   private Function function;
-  private LoxLocalStack locals;
+  private Local[] locals;
+  private int localsCount;
   private Upvalue[] upvalues;
   private int scopeDepth;
 
-  //CompilerLocals(Props, CompilerLocals, FunctionType)
-  public CompilerLocals(
-    Props properties, CompilerLocals enclosing, FunctionType type
-  ) {
-    this(properties, enclosing, type, null);
+  //CompilerLocals(CompilerLocals, FunctionType, int)
+  public CompilerLocals(CompilerLocals enclosing, FunctionType type, int stackSize) {
+    this(enclosing, type, stackSize, null);
   }
 
-  //CompilerLocals(Props, CompilerLocals, FunctionType, String)
+  //CompilerLocals(Props, CompilerLocals, FunctionType, int, String)
   public CompilerLocals(
-    Props properties, CompilerLocals enclosing, FunctionType type,
-    String functionName
+    CompilerLocals enclosing, FunctionType type, int stackSize, String functionName
   ) {
     this.enclosing = enclosing;
     this.type = type;
 
     function = new Function(functionName);
-    locals = new LoxLocalStack();
-    upvalues = new Upvalue[properties.getInt("MAX_STACK")];
+    locals = new Local[stackSize];
+    localsCount = 0;
+    upvalues = new Upvalue[stackSize];
     scopeDepth = 0;
 
     //Block out stack slot zero for the function being called.
@@ -49,7 +47,7 @@ public class CompilerLocals {
     else
       token = new Token(null, "", null, -1);
 
-    locals.push(new Local(token, 0));
+    locals[localsCount++] = new Local(token, 0);
   }
 
   //enclosing()
@@ -78,13 +76,33 @@ public class CompilerLocals {
   }
 
   //locals()
-  public LoxLocalStack locals(){
+  public Local[] locals(){
     return locals;
+  }
+
+  //localsCount()
+  public int localsCount() {
+    return localsCount;
+  }
+
+  //peek()
+  public Local peek() {
+    return locals[localsCount - 1];
+  }
+
+  //pop()
+  public Local pop() {
+    return locals[(localsCount--) - 1];
+  }
+
+  //push(Local)
+  public void push(Local local) {
+    locals[localsCount++] = local;
   }
 
   //markInitialized()
   public void markInitialized() {
-    locals.peek().setDepth(scopeDepth);
+    locals[localsCount - 1].setDepth(scopeDepth);
   }
 
   //addUpvalue(Upvalue)
@@ -108,8 +126,8 @@ public class CompilerLocals {
   public String toString() {
     StringBuilder sb = new StringBuilder();
 
-    for (int i = 0; i < locals.count(); i++) {
-      Local local = locals.get(i);
+    for (int i = 0; i < localsCount; i++) {
+      Local local = locals[i];
       String lexeme = local.token().lexeme();
       int depth = local.depth();
 

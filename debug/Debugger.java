@@ -7,8 +7,6 @@ import jblox.compiler.Function;
 import jblox.compiler.CompilerLocals;
 import jblox.main.Props;
 import jblox.main.PropsObserver;
-import jblox.util.LoxValueMap;
-import jblox.util.LoxStack;
 import jblox.vm.CallFrame;
 
 import static jblox.compiler.OpCode.*;
@@ -46,13 +44,14 @@ public class Debugger implements PropsObserver {
     System.out.println((source.length() == 0) ? "[ no source ]" : source);
   }
 
-  //traceExecution(CallFrame, LoxMap, LoxStack)
-  public void traceExecution(CallFrame frame, LoxValueMap globals, LoxStack stack) {
+  ////traceExecution(CallFrame, Map, Object[])
+  public void traceExecution(CallFrame frame, Map<String, Object> globals, Object[] substack) {
     if (printGlobals)
       System.out.println("Globals: " + globals);
 
     if (printStack)
-      System.out.println("          " + stack);
+      //System.out.println("          " + stack);
+      System.out.println("          " + java.util.Arrays.toString(substack));
 
     disassembleInstruction(frame.closure().function().chunk(), frame.ip());
   }
@@ -74,7 +73,7 @@ public class Debugger implements PropsObserver {
 
     printBanner(name);
 
-    for (int offset = 0; offset < chunk.codes().count();)
+    for (int offset = 0; offset < chunk.codesCount();)
       offset = disassembleInstruction(chunk, offset);
   }
 
@@ -90,11 +89,11 @@ public class Debugger implements PropsObserver {
 
     if (
       (offset > 0) &&
-      (chunk.lines().get(offset) == chunk.lines().get(offset - 1))
+      (chunk.lines()[offset] == chunk.lines()[offset - 1])
     )
       System.out.print("   | ");
     else
-      System.out.print(String.format("%4d ", chunk.lines().get(offset)));
+      System.out.print(String.format("%4d ", chunk.lines()[offset]));
 
     if (printOpCode)
       System.out.print("(" + String.format("0x%02X", instruction) + ") ");
@@ -187,7 +186,7 @@ public class Debugger implements PropsObserver {
 
     System.out.print(String.format("%-16s %4d ", name, operand));
 
-    Function function = chunk.constants().get(operand).asFunction();
+    Function function = (Function)chunk.constants()[operand];
 
     System.out.println(function);
 
@@ -212,7 +211,7 @@ public class Debugger implements PropsObserver {
 
     System.out.print(String.format("%-16s %4d ", name, operand));
 
-    Object constant = chunk.constants().get(operand);
+    Object constant = chunk.constants()[operand];
 
     if (constant instanceof String)
       System.out.print("'" + constant + "'\n");
@@ -225,7 +224,7 @@ public class Debugger implements PropsObserver {
   //invokeInstruction(String, Chunk, int)
   private int invokeInstruction(String name, Chunk chunk, int offset) {
     short operand = getWordOperand(chunk, offset);
-    Object constant = chunk.constants().get(operand);
+    Object constant = chunk.constants()[operand];
     byte argCount = getCode(chunk, offset + 3);
 
     System.out.print(String.format("%-16s (%d args) %4d ", name, argCount, operand));
@@ -271,18 +270,18 @@ public class Debugger implements PropsObserver {
 
   //getCode(Chunk, int)
   private byte getCode(Chunk chunk, int offset) {
-    return (byte)chunk.codes().get(offset);
+    return (byte)chunk.codes()[offset];
   }
 
   //getByteOperand(Chunk, int)
   private byte getByteOperand(Chunk chunk, int offset) {
-   return (byte)chunk.codes().get(offset + 1);
+   return (byte)chunk.codes()[offset + 1];
   }
 
   //getWordOperand(Chunk, int)
   private short getWordOperand(Chunk chunk, int offset) {
-    byte hi = (byte)chunk.codes().get(offset + 1);
-    byte lo = (byte)chunk.codes().get(offset + 2);
+    byte hi = (byte)chunk.codes()[offset + 1];
+    byte lo = (byte)chunk.codes()[offset + 2];
 
     return (short)(((hi & 0xFF) << 8) | (lo & 0xFF));
   }
