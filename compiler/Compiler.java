@@ -81,7 +81,7 @@ public class Compiler extends PropsObserver {
     parser.setPrevious(parser.current());
 
     for (;;) {
-      parser.setCurrent(scanner.scanToken());
+      parser.setCurrent(scanner.getNextToken());
 
       if (parser.current().type() != TOKEN_ERROR)
         break;

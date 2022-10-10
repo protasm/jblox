@@ -11,13 +11,9 @@ import jblox.main.PropsObserver;
 
 import static jblox.scanner.TokenType.*;
 
-public class Scanner extends PropsObserver {
+public class Scanner extends SourceReader {
   private static final Map<String, TokenType> keywords;
   private List<Token> tokens;
-  private String source;
-  private int start;
-  private int current;
-  private int line;
   private int nextToken;
 
   //Cached properties
@@ -65,27 +61,21 @@ public class Scanner extends PropsObserver {
     if (debugPrintSource) debugger.printSource(source);
     if (debugPrintProgress) debugger.printProgress("Scanning....");
 
-    scanTokens();
-  }
-
-  //scanToken()
-  public Token scanToken() {
-    if (nextToken > (tokens.size() - 1))
-      return (new Token(TOKEN_EOF, "", null, line));
-    else
-      return tokens.get(nextToken++);
-  }
-
-  //scanTokens()
-  private List<Token> scanTokens() {
+    // Scan tokens.
     while (!isAtEnd()) {
       // We are at the beginning of the next lexeme.
       start = current;
 
       lexToken();
     }
+  }
 
-    return tokens;
+  //getNextToken()
+  public Token getNextToken() {
+    if (nextToken > (tokens.size() - 1))
+      return (new Token(TOKEN_EOF, "", null, line));
+    else
+      return tokens.get(nextToken++);
   }
 
   //lexToken()
@@ -232,58 +222,6 @@ public class Scanner extends PropsObserver {
     String value = source.substring(start + 1, current - 1);
 
     addToken(TOKEN_STRING, value);
-  }
-
-  //match()
-  private boolean match(char expected) {
-    if (isAtEnd()) return false;
-
-    if (source.charAt(current) != expected) return false;
-
-    current++;
-
-    return true;
-  }
-
-  //peek()
-  private char peek() {
-    if (isAtEnd()) return '\0';
-
-    return source.charAt(current);
-  }
-
-  //peekNext()
-  private char peekNext() {
-    if (current + 1 >= source.length()) return '\0';
-
-    return source.charAt(current + 1);
-  }
-
-  //isAlpha(char)
-  private boolean isAlpha(char c) {
-    return (c >= 'a' && c <= 'z') ||
-           (c >= 'A' && c <= 'Z') ||
-            c == '_';
-  }
-
-  //isAlphaNumeric(char)
-  private boolean isAlphaNumeric(char c) {
-    return isAlpha(c) || isDigit(c);
-  }
-
-  //isDigit(char)
-  private boolean isDigit(char c) {
-    return c >= '0' && c <= '9';
-  }
-
-  //isAtEnd()
-  private boolean isAtEnd() {
-    return current >= source.length();
-  }
-
-  //advance()
-  private char advance() {
-    return source.charAt(current++);
   }
 
   //addToken()
