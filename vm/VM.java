@@ -16,7 +16,7 @@ import jblox.nativefn.*;
 
 import static jblox.compiler.OpCode.*;
 
-public class VM implements PropsObserver {
+public class VM extends PropsObserver {
   //InterpretResult
   public enum InterpretResult {
     INTERPRET_OK,
@@ -34,8 +34,6 @@ public class VM implements PropsObserver {
     OPERATION_LT,
   }
 
-  private Props properties;
-  private Debugger debugger;
   private Compiler compiler;
   private Map<String, Object> globals;
   private Object[] vStack; //Value stack
@@ -52,15 +50,9 @@ public class VM implements PropsObserver {
 
   //VM()
   public VM(Props properties, Debugger debugger) {
-    this.properties = properties;
-    this.debugger = debugger;
+    super(properties, debugger);
 
-    properties.registerObserver(this);
-
-    updateCachedProperties();
-
-    if (debugPrintProgress)
-      debugger.printProgress("Initializing VM....");
+    if (debugPrintProgress) debugger.printProgress("Initializing VM....");
 
     compiler = new Compiler(properties, debugger);
     globals = new HashMap<>();
@@ -875,13 +867,8 @@ public class VM implements PropsObserver {
     return true;
   }
 
-  //notifyPropertiesChanged()
-  public void notifyPropertiesChanged() {
-    updateCachedProperties();
-  }
-
   //updateCachedProperties()
-  private void updateCachedProperties() {
+  protected void updateCachedProperties() {
     debugMaster = properties.getBool("DEBUG_MASTER");
     debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
     debugTraceExecution = debugMaster && properties.getBool("DEBUG_TRACE_EXECUTION");

@@ -18,9 +18,7 @@ import static jblox.compiler.OpCode.*;
 import static jblox.parser.Parser.Precedence.*;
 import static jblox.scanner.TokenType.*;
 
-public class Compiler implements PropsObserver {
-  private Props properties;
-  private Debugger debugger;
+public class Compiler extends PropsObserver {
   private Scanner scanner;
   private Map<TokenType, ParseRule> typeToRule;
   private Parser parser;
@@ -34,12 +32,7 @@ public class Compiler implements PropsObserver {
 
   //Compiler
   public Compiler(Props properties, Debugger debugger) {
-    this.properties = properties;
-    this.debugger = debugger;
-
-    properties.registerObserver(this);
-
-    updateCachedProperties();
+    super(properties, debugger);
 
     if (debugPrintProgress) debugger.printProgress("Initializing compiler....");
 
@@ -941,13 +934,8 @@ public class Compiler implements PropsObserver {
     register(TOKEN_EOF,           null,                   null,                 PREC_NONE);
   }
 
-  //notifyPropertiesChanged()
-  public void notifyPropertiesChanged() {
-    updateCachedProperties();
-  }
-
   //updateCachedProperties()
-  private void updateCachedProperties() {
+  protected void updateCachedProperties() {
     debugMaster = properties.getBool("DEBUG_MASTER");
     debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
     debugPrintCode = debugMaster && properties.getBool("DEBUG_PRINT_CODE");

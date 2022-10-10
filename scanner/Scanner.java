@@ -11,9 +11,7 @@ import jblox.main.PropsObserver;
 
 import static jblox.scanner.TokenType.*;
 
-public class Scanner implements PropsObserver {
-  private Props properties;
-  private Debugger debugger;
+public class Scanner extends PropsObserver {
   private static final Map<String, TokenType> keywords;
   private List<Token> tokens;
   private String source;
@@ -49,12 +47,7 @@ public class Scanner implements PropsObserver {
 
   //Scanner(Props, Debugger)
   public Scanner(Props properties, Debugger debugger) {
-    this.properties = properties;
-    this.debugger = debugger;
-
-    properties.registerObserver(this);
-
-    updateCachedProperties();
+    super(properties, debugger);
 
     if (debugPrintProgress) debugger.printProgress("Initializing scanner....");
   }
@@ -305,13 +298,8 @@ public class Scanner implements PropsObserver {
     tokens.add(new Token(type, text, literal, line));
   }
 
-  //notifyPropertiesChanged()
-  public void notifyPropertiesChanged() {
-    updateCachedProperties();
-  }
-
   //updateCachedProperties()
-  private void updateCachedProperties() {
+  protected void updateCachedProperties() {
     debugMaster = properties.getBool("DEBUG_MASTER");
     debugPrintProgress = debugMaster && properties.getBool("DEBUG_PRINT_PROGRESS");
     debugPrintSource = debugMaster && properties.getBool("DEBUG_PRINT_SOURCE");
