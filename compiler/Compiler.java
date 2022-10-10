@@ -84,6 +84,7 @@ public class Compiler implements PropsObserver {
 
   //advance()
   private void advance() {
+    //advance to the next non-error Token (or EOF)
     parser.setPrevious(parser.current());
 
     for (;;) {
@@ -131,6 +132,11 @@ public class Compiler implements PropsObserver {
     currentChunk().writeCode(b, parser.previous().line());
   }
 
+  //emitWord(int)
+  public void emitWord(int i) {
+    emitWord((short)i);
+  }
+
   //emitWord(short)
   public void emitWord(short s) {
     emitByte(highByte(s));
@@ -157,7 +163,7 @@ public class Compiler implements PropsObserver {
 
     if (offset > maxLoop) error("Loop body too large.");
 
-    emitWord((short)offset);
+    emitWord(offset);
   }
 
   //emitJump(byte)
@@ -175,7 +181,7 @@ public class Compiler implements PropsObserver {
   private void emitReturn() {
     if (currentLocals.type() == TYPE_INITIALIZER) {
       emitByte(OP_GET_LOCAL);
-      emitWord((short)0);
+      emitWord(0);
     } else
       emitByte(OP_NIL);
 
@@ -201,7 +207,7 @@ public class Compiler implements PropsObserver {
     int index = makeConstant(value);
 
     emitByte(OP_CONSTANT);
-    emitWord((short)index);
+    emitWord(index);
   }
 
   //patchJump(int)
@@ -293,10 +299,10 @@ public class Compiler implements PropsObserver {
       expression();
 
       emitByte(setOp);
-      emitWord((short)arg);
+      emitWord(arg);
     } else { //retrieval
       emitByte(getOp);
-      emitWord((short)arg);
+      emitWord(arg);
     }
   }
 
@@ -471,7 +477,7 @@ public class Compiler implements PropsObserver {
     }
 
     emitByte(OP_DEFINE_GLOBAL);
-    emitWord((short)index);
+    emitWord(index);
   }
 
   //syntheticToken(String)
@@ -532,9 +538,9 @@ public class Compiler implements PropsObserver {
         if (locals.function().arity() > maxSignedByte)
           errorAtCurrent("Can't have more than " + maxSignedByte + " parameters.");
 
-        int constantIdx = parseVariable("Expect parameter name.");
+        int index = parseVariable("Expect parameter name.");
 
-        defineVariable(constantIdx);
+        defineVariable(index);
       } while (match(TOKEN_COMMA));
 
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
@@ -545,7 +551,7 @@ public class Compiler implements PropsObserver {
     Function function = endCompilation(); //sets currentLocals to enclosing
 
     emitByte(OP_CLOSURE);
-    emitWord((short)makeConstant(function));
+    emitWord(makeConstant(function));
 
     for (int i = 0; i < function.upvalueCount(); i++) {
       emitByte((byte)(locals.getUpvalue(i).isLocal() ? 1 : 0));
@@ -570,7 +576,7 @@ public class Compiler implements PropsObserver {
     function(type);
 
     emitByte(OP_METHOD);
-    emitWord((short)constant);
+    emitWord(constant);
   }
 
   //classDeclaration()
@@ -584,7 +590,7 @@ public class Compiler implements PropsObserver {
     declareVariable();
 
     emitByte(OP_CLASS);
-    emitWord((short)nameConstantIdx);
+    emitWord(nameConstantIdx);
 
     defineVariable(nameConstantIdx);
 
@@ -645,16 +651,24 @@ public class Compiler implements PropsObserver {
 
   //varDeclaration()
   private void varDeclaration() {
-    int globalIdx = parseVariable("Expect variable name.");
+    int index = parseVariable("Expect variable name.");
 
     if (match(TOKEN_EQUAL))
       expression();
     else
       emitByte(OP_NIL);
 
-    consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+    defineVariable(index);
 
-    defineVariable(globalIdx);
+    //handle variable declarations of the form:
+    //var x = 99, y, z = "hello";
+    if (match(TOKEN_COMMA)) {
+      varDeclaration();
+
+      return;
+    }
+
+    consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration(s).");
   }
 
   //expressionStatement()
@@ -752,15 +766,6 @@ public class Compiler implements PropsObserver {
     patchJump(elseJump);
   }
 
-  //printStatement()
-  //private void printStatement() {
-  //  expression();
-
-  //  consume(TOKEN_SEMICOLON, "Expect ';' after value.");
-
-  //  emitByte(OP_PRINT);
-  //}
-
   //returnStatement()
   private void returnStatement() {
     if (currentLocals.type() == TYPE_SCRIPT)
@@ -817,7 +822,6 @@ public class Compiler implements PropsObserver {
         case TOKEN_FOR:
         case TOKEN_IF:
         case TOKEN_WHILE:
-        //case TOKEN_PRINT:
         case TOKEN_RETURN:
           return;
 
@@ -846,8 +850,6 @@ public class Compiler implements PropsObserver {
 
   //statement()
   private void statement() {
-    //if (match(TOKEN_PRINT))
-      //printStatement();
     if (match(TOKEN_FOR))
       forStatement();
     else if (match(TOKEN_IF))
@@ -929,9 +931,8 @@ public class Compiler implements PropsObserver {
     register(TOKEN_IF,            null,                   null,                 PREC_NONE);
     register(TOKEN_NIL,           new LiteralParselet(),  null,                 PREC_NONE);
     register(TOKEN_OR,            null,                   new OrParselet(),     PREC_OR);
-    //register(TOKEN_PRINT,         null,                   null,                 PREC_NONE);
     register(TOKEN_RETURN,        null,                   null,                 PREC_NONE);
-    register(TOKEN_SUPER,         new SuperParselet(),   null,                 PREC_NONE);
+    register(TOKEN_SUPER,         new SuperParselet(),    null,                 PREC_NONE);
     register(TOKEN_THIS,          new ThisParselet(),     null,                 PREC_NONE);
     register(TOKEN_TRUE,          new LiteralParselet(),  null,                 PREC_NONE);
     register(TOKEN_VAR,           null,                   null,                 PREC_NONE);

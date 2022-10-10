@@ -5,15 +5,15 @@ fun outer() {
   fun middle() {
     fun inner() {
       a = "aardvark";
-      print x;
+      println(x);
     }
 
-    print "return from middle";
+    println("return from middle");
 
     return inner;
   }
 
-  print "return from outer";
+  println("return from outer");
 
   return middle;
 }

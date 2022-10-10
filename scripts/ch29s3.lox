@@ -1,7 +1,7 @@
-print "Should print 'A':";
+println("Should print 'A':");
 
 class A {
-  method() { print "A"; }
+  method() { println("A"); }
 }
 
 class B < A {

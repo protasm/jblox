@@ -2,29 +2,29 @@ var before = clock();
 
 766;
 
-print 119;
+println(119);
 
 15 + 21;
 
-print 45 + 123;
+println(45 + 123);
 
 14 * (5 + 4) - 1;
 
-{ var a = 99; { var a = 88; print a; } print a; }
+{ var a = 99; { var a = 88; println(a); } println(a); }
 
-if (true and false) print "Yes."; else { print "No."; }
+if (true and false) println("Yes."); else { println("No."); }
 
 var n = 5;
 
-while (n > 0) { print n; n = n - 1; }
+while (n > 0) { println(n); n = n - 1; }
 
-for (var a = 9; a > 0; a = a - 1) print a;
+for (var a = 9; a > 0; a = a - 1) println(a);
 
 fun foo(n) { return n + 1; }
 
-print foo(99);
+println(foo(99));
 
-print "Before:";
-print before;
-print "After:";
-print clock();
+println("Before:");
+println(before);
+println("After:");
+println(clock());

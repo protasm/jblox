@@ -1,0 +1,29 @@
+/*****************************
+Multiline comment test
+*****************************/
+
+var a;
+
+a = 1;
+
+/*
+a = 99;
+*/
+
+println("Should print 1:");
+println(a);
+
+/*
+Test
+
+//Single line comment.
+
+println("bar"); /*another multiline, but only on one line*/
+
+var foobar = "foobar";
+
+/*
+println(foobar);
+*/
+
+println(foobar);

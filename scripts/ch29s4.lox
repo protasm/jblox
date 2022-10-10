@@ -1,11 +1,11 @@
 class Doughnut {
   cook() {
-    print "Dunk in the fryer.";
+    println("Dunk in the fryer.");
 
     this.finish("sprinkles");
   }
 
-  finish(ingredient) { print "Finish with " + ingredient + "."; }
+  finish(ingredient) { println("Finish with " + ingredient + "."); }
 }
 
 class Cruller < Doughnut {

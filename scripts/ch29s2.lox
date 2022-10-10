@@ -1,11 +1,11 @@
-print "Should print 'A method':";
+println("Should print 'A method':");
 
 class A {
-  method() { print "A method"; }
+  method() { println("A method"); }
 }
 
 class B < A {
-  method() { print "B method"; }
+  method() { println("B method"); }
 
   test() { super.method(); }
 }

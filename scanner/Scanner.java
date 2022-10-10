@@ -39,7 +39,6 @@ public class Scanner implements PropsObserver {
     keywords.put("if",     TOKEN_IF);
     keywords.put("nil",    TOKEN_NIL);
     keywords.put("or",     TOKEN_OR);
-    //keywords.put("print",  TOKEN_PRINT);
     keywords.put("return", TOKEN_RETURN);
     keywords.put("super",  TOKEN_SUPER);
     keywords.put("this",   TOKEN_THIS);
@@ -48,7 +47,7 @@ public class Scanner implements PropsObserver {
     keywords.put("while",  TOKEN_WHILE);
   }
 
-  //Scanner()
+  //Scanner(Props, Debugger)
   public Scanner(Props properties, Debugger debugger) {
     this.properties = properties;
     this.debugger = debugger;
@@ -113,36 +112,44 @@ public class Scanner implements PropsObserver {
       case '*': addToken(TOKEN_STAR); break;
       case '!':
         addToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
+
         break;
       case '=':
         addToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+
         break;
       case '<':
         addToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+
         break;
       case '>':
         addToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+
         break;
       case '/':
         if (match('/'))
-          // A comment goes until the end of the line.
-          while (peek() != '\n' && !isAtEnd()) advance();
+          // A double-slash comment goes until the end of the line.
+          singleLineComment();
+        else if (match('*'))
+          // A slash-star comment can span multiple lines.
+          multiLineComment();
         else
           addToken(TOKEN_SLASH);
-        break;
 
+        break;
       case ' ':
       case '\r':
       case '\t':
         // Ignore whitespace.
         break;
-
       case '\n':
         line++;
+
         break;
+      case '"':
+        string();
 
-      case '"': string(); break;
-
+        break;
       default:
         if (isDigit(c))
           number();
@@ -150,8 +157,37 @@ public class Scanner implements PropsObserver {
           identifier();
         else
           tokens.add(new Token(TOKEN_ERROR, "Unexpected character.", null, line));
+
         break;
     }
+  }
+
+  //singleLineComment()
+  private void singleLineComment() {
+    while (peek() != '\n' && !isAtEnd())
+      advance();
+  }
+
+  //multiLineComment()
+  private void multiLineComment() {
+    while (peek() != '*' && !isAtEnd())
+      advance();
+
+    if (isAtEnd()) {
+      tokens.add(new Token(TOKEN_ERROR, "Unterminated multiline comment.", null, line));
+
+      return;
+    }
+
+    //Consume the '*'.
+    advance();
+
+    if (peek() != '/')
+      //Continue seeking end of comment ("*/").
+      multiLineComment();
+    else
+      //Consume the '/'.
+      advance();
   }
 
   //identifier()
@@ -172,7 +208,7 @@ public class Scanner implements PropsObserver {
 
     // Look for a fractional part.
     if (peek() == '.' && isDigit(peekNext())) {
-      // Consume the "."
+      // Consume the '.'
       advance();
 
       while (isDigit(peek())) advance();
@@ -196,7 +232,7 @@ public class Scanner implements PropsObserver {
       return;
     }
 
-    // The closing ".
+    // The closing '"'.
     advance();
 
     // Trim the surrounding quotes.
