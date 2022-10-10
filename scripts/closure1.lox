@@ -1,6 +1,6 @@
-print "This program should print 'assigned' even though the closure";
-print "assigns to x and the surrounding function accesses it.";
-print "If it prints 'before' instead, something went wrong.";
+println("This program should print 'assigned' even though the closure");
+println("assigns to x and the surrounding function accesses it.");
+println("If it prints 'before' instead, something went wrong.");
 
 fun outer() {
   var x = "before";
@@ -11,7 +11,7 @@ fun outer() {
 
   inner();
 
-  print x;
+  println(x);
 }
 
 outer();

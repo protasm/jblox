@@ -1,4 +1,4 @@
-print "Should print 'updated':";
+println("Should print 'updated':");
 
 var globalSet;
 var globalGet;
@@ -7,7 +7,7 @@ fun main() {
   var a = "initial";
 
   fun set() { a = "updated"; }
-  fun get() { print a; }
+  fun get() { println(a); }
 
   globalSet = set;
   globalGet = get;

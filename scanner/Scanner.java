@@ -22,23 +22,23 @@ public class Scanner extends SourceReader {
   private boolean debugPrintSource;
 
   static {
-    keywords = new HashMap<>();
-
-    keywords.put("and",    TOKEN_AND);
-    keywords.put("class",  TOKEN_CLASS);
-    keywords.put("else",   TOKEN_ELSE);
-    keywords.put("false",  TOKEN_FALSE);
-    keywords.put("for",    TOKEN_FOR);
-    keywords.put("fun",    TOKEN_FUN);
-    keywords.put("if",     TOKEN_IF);
-    keywords.put("nil",    TOKEN_NIL);
-    keywords.put("or",     TOKEN_OR);
-    keywords.put("return", TOKEN_RETURN);
-    keywords.put("super",  TOKEN_SUPER);
-    keywords.put("this",   TOKEN_THIS);
-    keywords.put("true",   TOKEN_TRUE);
-    keywords.put("var",    TOKEN_VAR);
-    keywords.put("while",  TOKEN_WHILE);
+    keywords = new HashMap<>() {{
+      put("and",    TOKEN_AND);
+      put("class",  TOKEN_CLASS);
+      put("else",   TOKEN_ELSE);
+      put("false",  TOKEN_FALSE);
+      put("for",    TOKEN_FOR);
+      put("fun",    TOKEN_FUN);
+      put("if",     TOKEN_IF);
+      put("nil",    TOKEN_NIL);
+      put("or",     TOKEN_OR);
+      put("return", TOKEN_RETURN);
+      put("super",  TOKEN_SUPER);
+      put("this",   TOKEN_THIS);
+      put("true",   TOKEN_TRUE);
+      put("var",    TOKEN_VAR);
+      put("while",  TOKEN_WHILE);
+    }};
   }
 
   //Scanner(Props, Debugger)

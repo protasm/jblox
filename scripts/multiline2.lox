@@ -1,0 +1,12 @@
+var x = 99;
+
+/****************************
+** Test /*Don't mind me*/
+** Comment
+****************************/
+
+var y = "hello";
+
+println(x);
+println(y);
+

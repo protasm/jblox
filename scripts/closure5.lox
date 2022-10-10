@@ -1,10 +1,10 @@
-print "Should print 'outside':";
+println("Should print 'outside':");
 
 fun outer() {
   var x = "outside";
 
   fun inner() {
-    print x;
+    println(x);
   }
 
   return inner;

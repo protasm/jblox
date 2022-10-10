@@ -1,4 +1,4 @@
-print "Should print '10':";
+println("Should print '10':");
 
 fun outer() {
   var a = 1;
@@ -9,7 +9,7 @@ fun outer() {
     var d = 4;
 
     fun inner() {
-      print a + c + b + d;
+      println(a + c + b + d);
     }
 
     inner();
