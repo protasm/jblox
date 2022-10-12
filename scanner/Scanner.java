@@ -15,6 +15,8 @@ public class Scanner extends SourceReader {
   private static final Map<String, TokenType> keywords;
   private List<Token> tokens;
   private int nextToken;
+  private int start;
+  private int line;
 
   //Cached properties
   private boolean debugMaster;
@@ -50,13 +52,13 @@ public class Scanner extends SourceReader {
 
   //scan(String)
   public void scan(String source) {
-    this.source = source;
+    setSource(source);
 
     tokens = new ArrayList<>();
-    start = 0;
-    current = 0;
-    line = 1;
     nextToken = 0;
+
+    start = 0;
+    line = 1;
 
     if (debugPrintSource) debugger.printSource(source);
     if (debugPrintProgress) debugger.printProgress("Scanning....");
@@ -224,7 +226,7 @@ public class Scanner extends SourceReader {
     addToken(TOKEN_STRING, value);
   }
 
-  //addToken()
+  //addToken(TokenType)
   private void addToken(TokenType type) {
     addToken(type, null);
   }

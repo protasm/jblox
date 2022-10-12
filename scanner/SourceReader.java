@@ -6,13 +6,18 @@ import jblox.main.PropsObserver;
 
 public abstract class SourceReader extends PropsObserver {
   protected String source;
-  protected int start;
   protected int current;
-  protected int line;
 
   //SourceReader(Props, Debugger)
   public SourceReader(Props properties, Debugger debugger) {
     super(properties, debugger);
+  }
+
+  //setSource(String)
+  protected void setSource(String source) {
+    this.source = source;
+
+    current = 0;
   }
 
   //match()
