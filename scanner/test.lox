@@ -1,0 +1,17 @@
+println("Hi!");
+
+var x = 1;
+
+/**test comment
+*/
+
+var abc;
+
+/**/println("foo");
+
+var y;
+//test
+
+println(x);
+
+

@@ -117,7 +117,7 @@ public class Scanner extends SourceReader {
           singleLineComment();
         else if (match('*'))
           // A slash-star comment can span multiple lines.
-          multiLineComment();
+          multilineComment();
         else
           addToken(TOKEN_SLASH);
 
@@ -153,26 +153,19 @@ public class Scanner extends SourceReader {
       advance();
   }
 
-  //multiLineComment()
-  private void multiLineComment() {
-    while (peek() != '*' && !isAtEnd())
+  //multilineComment()
+  private void multilineComment() {
+    while (!isAtEnd()) {
+      if (match('*') && match('/'))
+        return;
+
+      if (peek() == '\n') line++;
+
       advance();
+    } //while
 
-    if (isAtEnd()) {
-      tokens.add(new Token(TOKEN_ERROR, "Unterminated multiline comment.", null, line));
-
-      return;
-    }
-
-    //Consume the '*'.
-    advance();
-
-    if (peek() != '/')
-      //Continue seeking end of comment ("*/").
-      multiLineComment();
-    else
-      //Consume the '/'.
-      advance();
+    // Error if we get here.
+    tokens.add(new Token(TOKEN_ERROR, "Unterminated multiline comment.", null, line));
   }
 
   //identifier()
