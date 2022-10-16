@@ -7,11 +7,12 @@ var x = 1;
 
 var abc;
 
-/**/println("foo");
+/*1*2*3*/println("foo");
 
 var y;
 //test
 
+/*
+*/println("bar"); // leading spaces
+
 println(x);
-
-

@@ -155,14 +155,15 @@ public class Scanner extends SourceReader {
 
   //multilineComment()
   private void multilineComment() {
-    while (!isAtEnd()) {
-      if (match('*') && match('/'))
-        return;
+    while (!isAtEnd())
+      if (match('*')) {
+        if (match('/'))
+          return;
+      } else {
+        if (peek() == '\n') line++;
 
-      if (peek() == '\n') line++;
-
-      advance();
-    } //while
+        advance();
+      }
 
     // Error if we get here.
     tokens.add(new Token(TOKEN_ERROR, "Unterminated multiline comment.", null, line));
