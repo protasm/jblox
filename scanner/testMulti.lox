@@ -1,7 +1,10 @@
 println("Hi!");
 
+var x = 1;
+
 /******************
 Multiline comment here.
+x = 99
 ******************/
 
-var x = 1;
+println(x); //should print 1

@@ -1,18 +1,23 @@
 println("Hi!");
 
-var x = 1;
+var x = 99;
 
 /**test comment
 */
 
 var abc;
 
-/*1*2*3*/println("foo");
+/*1*2*3*/println("foo");/*4*5*6*/
 
 var y;
 //test
-
+/*uh oh
+println("this won't end well");
 /*
 */println("bar"); // leading spaces
+
+/*
+println("Don't print"); //shouldn't print
+*/
 
 println(x);
