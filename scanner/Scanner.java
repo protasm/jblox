@@ -146,10 +146,8 @@ public class Scanner extends SourceReader {
 
   //blockComment()
   private void blockComment() {
-    while (!isAtEnd()) {
-      char c = peekAndAdvance();
-
-      switch(c) {
+    while (!isAtEnd())
+      switch(peekAndAdvance()) {
         case '/':
           if (match('*')) {
             errorToken("Nested block comment.");
@@ -165,7 +163,6 @@ public class Scanner extends SourceReader {
         default:
           break;
       } //switch
-    } //while
 
     // Error if we get here.
     errorToken("Unterminated block comment.");
