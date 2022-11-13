@@ -11,8 +11,11 @@ import jblox.main.PropsObserver;
 
 import static jblox.scanner.TokenType.*;
 
-public class Scanner extends SourceReader {
+public class Scanner extends PropsObserver {
+  private static final char EOL = '\n';
   private static final Map<String, TokenType> keywords;
+  private static final Map<Character, TokenType> oneCharLexemes;
+  private ScannableSource ss;
   private List<Token> tokens;
   private int nextToken;
 
@@ -39,19 +42,31 @@ public class Scanner extends SourceReader {
       put("var",    TOKEN_VAR);
       put("while",  TOKEN_WHILE);
     }};
+
+    oneCharLexemes = new HashMap<>() {{
+      put('(', TOKEN_LEFT_PAREN);
+      put(')', TOKEN_RIGHT_PAREN);
+      put('{', TOKEN_LEFT_BRACE);
+      put('}', TOKEN_RIGHT_BRACE);
+      put(',', TOKEN_COMMA);
+      put('.', TOKEN_DOT);
+      put('-', TOKEN_MINUS);
+      put('+', TOKEN_PLUS);
+      put(';', TOKEN_SEMICOLON);
+      put('*', TOKEN_STAR);
+    }};
   }
 
   //Scanner(Props, Debugger)
   public Scanner(Props properties, Debugger debugger) {
     super(properties, debugger);
 
-    if (debugPrintProgress) debugger.printProgress("Initializing scanner....");
+    if (debugPrintProgress) debugger.printProgress("Scanner initialized.");
   }
 
   //scan(String)
   public void scan(String source) {
-    initialize(source);
-
+    ss = new ScannableSource(source);
     tokens = new ArrayList<>();
     nextToken = 0;
 
@@ -59,58 +74,46 @@ public class Scanner extends SourceReader {
     if (debugPrintProgress) debugger.printProgress("Scanning....");
 
     // Scan tokens.
-    while (!isAtEnd()) {
+    while (!ss.atEnd()) {
       // We are at the beginning of the next lexeme.
-      sync();
+      ss.sync();
 
       lexToken();
     }
   }
 
-  //getNextToken()
-  public Token getNextToken() {
-    if (nextToken > (tokens.size() - 1))
-      return (new Token(TOKEN_EOF, "", null, line()));
-    else
-      return tokens.get(nextToken++);
-  }
-
   //lexToken()
   private void lexToken() {
-    char c = peekAndAdvance();
+    char c = ss.peekAndAdvance();
 
-    switch (c) {
-      case '(': addToken(TOKEN_LEFT_PAREN); break;
-      case ')': addToken(TOKEN_RIGHT_PAREN); break;
-      case '{': addToken(TOKEN_LEFT_BRACE); break;
-      case '}': addToken(TOKEN_RIGHT_BRACE); break;
-      case ',': addToken(TOKEN_COMMA); break;
-      case '.': addToken(TOKEN_DOT); break;
-      case '-': addToken(TOKEN_MINUS); break;
-      case '+': addToken(TOKEN_PLUS); break;
-      case ';': addToken(TOKEN_SEMICOLON); break;
-      case '*': addToken(TOKEN_STAR); break;
+    if (oneCharLexemes.containsKey(c))
+      addToken(oneCharLexemes.get(c));
+    else if (isDigit(c))
+      number();
+    else if (isAlpha(c))
+      identifier();
+    else switch (c) {
       case '!':
-        addToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
+        addToken(ss.match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
 
         break;
       case '=':
-        addToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+        addToken(ss.match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
 
         break;
       case '<':
-        addToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+        addToken(ss.match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
 
         break;
       case '>':
-        addToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+        addToken(ss.match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
 
         break;
       case '/':
-        if (match('/'))
+        if (ss.match('/'))
           // A double-slash comment goes until the end of the line.
           lineComment();
-        else if (match('*'))
+        else if (ss.match('*'))
           // A slash-star comment can span multiple lines.
           blockComment();
         else
@@ -128,41 +131,32 @@ public class Scanner extends SourceReader {
 
         break;
       default:
-        if (isDigit(c))
-          number();
-        else if (isAlpha(c))
-          identifier();
-        else
-          unexpectedChar(c);
+        unexpectedChar(c);
 
         break;
-    }
+    } //switch
   }
 
   //lineComment()
   private void lineComment() {
-    seek(EOL);
+    ss.seek(EOL);
   }
 
   //blockComment()
   private void blockComment() {
-    while (!isAtEnd())
-      switch(peekAndAdvance()) {
-        case '/':
-          if (match('*')) {
-            errorToken("Nested block comment.");
+    while (!ss.atEnd()) {
+      ss.seek('*');
 
-            return;
-          }
+      if (ss.peekPrev() == '/') {
+        errorToken("Nested block comment");
 
-          break;
-        case '*':
-          if (match('/')) return;
+        return;
+      }
 
-          break;
-        default:
-          break;
-      } //switch
+      ss.advance();
+
+      if (ss.match('/')) return;
+    } //while
 
     // Error if we get here.
     errorToken("Unterminated block comment.");
@@ -170,9 +164,9 @@ public class Scanner extends SourceReader {
 
   //identifier()
   private void identifier() {
-    while (isAlphaNumeric(peek())) advance();
+    while (isAlphaNumeric(ss.peek())) ss.advance();
 
-    TokenType type = keywords.get(read());
+    TokenType type = keywords.get(ss.read());
 
     if (type == null) type = TOKEN_IDENTIFIER;
 
@@ -181,31 +175,31 @@ public class Scanner extends SourceReader {
 
   //number()
   private void number() {
-    while (isDigit(peek())) advance();
+    while (isDigit(ss.peek())) ss.advance();
 
     // Look for a fractional part.
-    if (peek() == '.' && isDigit(peekNext())) {
+    if (ss.peek() == '.' && isDigit(ss.peekNext())) {
       // Consume the '.'
-      advance();
+      ss.advance();
 
-      while (isDigit(peek())) advance();
+      while (isDigit(ss.peek())) ss.advance();
     }
 
-    addToken(TOKEN_NUMBER, Double.parseDouble(read()));
+    addToken(TOKEN_NUMBER, Double.parseDouble(ss.read()));
   }
 
   //string()
   private void string() {
-    if (!seek('"')) {
+    if (!ss.seek('"')) {
       errorToken("Unterminated string.");
 
       return;
     }
 
     // The closing '"'.
-    advance();
+    ss.advance();
 
-    addToken(TOKEN_STRING, readTrimmed()); //trim surrounding quotes
+    addToken(TOKEN_STRING, ss.readTrimmed()); //trim surrounding quotes
   }
 
   //addToken(TokenType)
@@ -215,17 +209,47 @@ public class Scanner extends SourceReader {
 
   //addToken(TokenType, Object)
   private void addToken(TokenType type, Object literal) {
-    tokens.add(new Token(type, read(), literal, line()));
+    tokens.add(new Token(type, ss.read(), literal, ss.line()));
   }
 
   //errorToken
   private void errorToken(String message) {
-    tokens.add(new Token(TOKEN_ERROR, message, null, line()));
+    tokens.add(new Token(TOKEN_ERROR, message, null, ss.line()));
   }
 
   //unexpectedChar(char)
   private void unexpectedChar(char c) {
     errorToken("Unexpected character: '" + c + "'.");
+  }
+
+  //getNextToken()
+  public Token getNextToken() {
+    if (nextToken <= (tokens.size() - 1))
+      return tokens.get(nextToken++);
+    else
+      return new Token(TOKEN_EOF, "", null, ss.line());
+  }
+
+  //isWhitespace(char)
+  private boolean isWhitespace(char c) {
+    return (c == ' ') || (c == '\r') || (c == '\t');
+  }
+
+  //isAlpha(char)
+  private boolean isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') ||
+           (c >= 'A' && c <= 'Z') ||
+            c == '_';
+  }
+
+  //isAlphaNumeric(char)
+  private boolean isAlphaNumeric(char c) {
+    return isAlpha(c) || isDigit(c);
+  }
+
+  //isDigit(char)
+  private boolean isDigit(char c) {
+    return c >= '0' && c <= '9';
   }
 
   //updateCachedProperties()

@@ -1,6 +1,7 @@
 package jblox.compiler;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 import jblox.debug.Debugger;
@@ -34,12 +35,12 @@ public class Compiler extends PropsObserver {
   public Compiler(Props properties, Debugger debugger) {
     super(properties, debugger);
 
-    if (debugPrintProgress) debugger.printProgress("Initializing compiler....");
-
     scanner = new Scanner(properties, debugger);
     typeToRule = new HashMap<>();
 
     registerTokens();
+
+    if (debugPrintProgress) debugger.printProgress("Compiler initialized.");
   }
 
   //parser()
@@ -56,11 +57,11 @@ public class Compiler extends PropsObserver {
   public Function compile(String source) {
     parser = new Parser();
 
+    scanner.scan(source);
+
     currentLocals = new CompilerLocals(
       null, TYPE_SCRIPT, properties.getInt("MAX_SIGNED_BYTE")
     );
-
-    scanner.scan(source);
 
     if (debugPrintProgress)
       debugger.printProgress("Compiling....");

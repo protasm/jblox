@@ -52,8 +52,6 @@ public class VM extends PropsObserver {
   public VM(Props properties, Debugger debugger) {
     super(properties, debugger);
 
-    if (debugPrintProgress) debugger.printProgress("Initializing VM....");
-
     compiler = new Compiler(properties, debugger);
     globals = new HashMap<>();
     vStack = new Object[properties.getInt("MAX_STACK")];
@@ -66,6 +64,8 @@ public class VM extends PropsObserver {
     defineNativeFn("println", new NativePrintLn());
 
     reset();
+
+    if (debugPrintProgress) debugger.printProgress("VM initialized.");
   }
 
   //fStackTop()
