@@ -8,21 +8,10 @@ public class NativePrintLn extends NativeFn {
 
   //execute(Object[])
   public Object execute(Object[] args) {
-    if (args.length == 0)
-      System.out.println();
-    else if (args.length == 1) {
-      Object o = args[0];
+    if (args.length == 1)
+      new NativePrint().execute(args);
 
-      if (o instanceof Number) {
-        double d = (double)o;
-
-        if (d == (long)d)
-          System.out.println(String.format("%d", (long)d));
-        else
-          System.out.println(String.format("%s", d));
-      } else
-        System.out.println(o);
-    }
+    System.out.println();
 
     return null;
   }
