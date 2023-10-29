@@ -2,7 +2,7 @@
 
 DIR="$HOME/jblox"
 
-clean
+./clean
 
 find $DIR -name "*.java" > $DIR/sources.txt
 
