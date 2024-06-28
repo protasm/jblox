@@ -1,0 +1,8 @@
+var x = 54;
+
+fun abc() { return def(); }
+fun def() { return mno(); }
+fun mno() { return xyz(); }
+fun xyz() { return x; }
+
+abc();

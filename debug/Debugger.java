@@ -38,7 +38,7 @@ public class Debugger extends PropsObserver {
     System.out.println((source.length() == 0) ? "[ no source ]" : source);
   }
 
-  ////traceExecution(CallFrame, Map, Object[])
+  //traceExecution(CallFrame, Map, Object[])
   public void traceExecution(CallFrame frame, Map<String, Object> globals, Object[] substack) {
     if (printGlobals)
       System.out.println("Globals: " + globals);
