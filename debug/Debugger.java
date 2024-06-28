@@ -1,5 +1,6 @@
 package jblox.debug;
 
+import java.util.Arrays;
 import java.util.Map;
 
 import jblox.compiler.Chunk;
@@ -60,7 +61,7 @@ public class Debugger extends PropsObserver {
     }
 
     if (printConstants)
-      System.out.println("Constants: " + chunk.constants());
+      System.out.println("Constants: " + Arrays.toString(chunk.constants()));
 
     if (printLocals)
       System.out.println("Locals: " + locals);
