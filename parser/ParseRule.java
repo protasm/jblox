@@ -1,6 +1,6 @@
-package jblox.parser;
+package parser;
 
-import jblox.parser.parselet.Parselet;
+import parser.parselet.Parselet;
 
 public class ParseRule {
   private Parselet prefix;

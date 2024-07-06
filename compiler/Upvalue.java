@@ -1,4 +1,4 @@
-package jblox.compiler;
+package compiler;
 
 public class Upvalue {
   private byte index;

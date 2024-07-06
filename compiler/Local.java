@@ -1,6 +1,6 @@
-package jblox.compiler;
+package compiler;
 
-import jblox.scanner.Token;
+import scanner.Token;
 
 public class Local {
   private Token token;

@@ -1,6 +1,6 @@
-package jblox.vm;
+package vm;
 
-import jblox.compiler.Function;
+import compiler.Function;
 
 public class Closure {
   private Function function;

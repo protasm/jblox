@@ -1,15 +1,15 @@
-package jblox.parser.parselet;
+package parser.parselet;
 
-import jblox.compiler.Compiler;
-import jblox.parser.ParseRule;
-import jblox.scanner.TokenType;
+import compiler.Compiler;
+import parser.ParseRule;
+import scanner.TokenType;
 
-import static jblox.compiler.OpCode.*;
-import static jblox.scanner.TokenType.*;
+import static compiler.OpCode.*;
+import static scanner.TokenType.*;
 
 public class BinaryParselet implements Parselet {
-  //parse(jblox.compiler.Compiler, boolean)
-  public void parse(jblox.compiler.Compiler compiler, boolean canAssign) {
+  //parse(compiler.Compiler, boolean)
+  public void parse(compiler.Compiler compiler, boolean canAssign) {
     TokenType operatorType = compiler.parser().previous().type();
     ParseRule rule = compiler.getRule(operatorType);
 

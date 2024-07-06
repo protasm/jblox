@@ -1,4 +1,4 @@
-package jblox.main;
+package main;
 
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
@@ -8,8 +8,8 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
-import jblox.debug.Debugger;
-import jblox.vm.VM;
+import debug.Debugger;
+import vm.VM;
 
 public class JBLox {
   private Props properties;

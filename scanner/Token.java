@@ -1,4 +1,4 @@
-package jblox.scanner;
+package scanner;
 
 public class Token {
   private TokenType type;

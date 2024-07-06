@@ -1,4 +1,4 @@
-package jblox.nativefn;
+package nativefn;
 
 public class NativeFoo extends NativeFn {
   //NativeFoo()

@@ -1,15 +1,15 @@
-package jblox.scanner;
+package scanner;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import jblox.debug.Debugger;
-import jblox.main.Props;
-import jblox.main.PropsObserver;
+import debug.Debugger;
+import main.Props;
+import main.PropsObserver;
 
-import static jblox.scanner.TokenType.*;
+import static scanner.TokenType.*;
 
 public class Scanner extends PropsObserver {
   private static final char EOL = '\n';

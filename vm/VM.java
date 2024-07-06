@@ -1,20 +1,20 @@
-package jblox.vm;
+package vm;
 
 import java.lang.Math;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
-import jblox.compiler.Chunk;
-import jblox.compiler.Compiler;
-import jblox.compiler.Function;
-import jblox.compiler.HasArity;
-import jblox.debug.Debugger;
-import jblox.main.Props;
-import jblox.main.PropsObserver;
-import jblox.nativefn.*;
+import compiler.Chunk;
+import compiler.Compiler;
+import compiler.Function;
+import compiler.HasArity;
+import debug.Debugger;
+import main.Props;
+import main.PropsObserver;
+import nativefn.*;
 
-import static jblox.compiler.OpCode.*;
+import static compiler.OpCode.*;
 
 public class VM extends PropsObserver {
   //InterpretResult

@@ -1,6 +1,6 @@
-package jblox.main;
+package main;
 
-import jblox.debug.Debugger;
+import debug.Debugger;
 
 public abstract class PropsObserver {
   protected Props properties;

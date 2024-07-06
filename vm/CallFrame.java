@@ -1,6 +1,6 @@
-package jblox.vm;
+package vm;
 
-import jblox.compiler.Function;
+import compiler.Function;
 
 public class CallFrame {
   private Closure closure;

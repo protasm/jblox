@@ -1,9 +1,9 @@
-package jblox.compiler;
+package compiler;
 
-import jblox.main.Props;
-import jblox.scanner.Token;
+import main.Props;
+import scanner.Token;
 
-import static jblox.scanner.TokenType.*;
+import static scanner.TokenType.*;
 
 public class CompilerLocals {
   public enum FunctionType {

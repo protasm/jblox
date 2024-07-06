@@ -1,4 +1,4 @@
-package jblox.scanner;
+package scanner;
 
 public class ScannableSource {
   private static final char EOL = '\n';

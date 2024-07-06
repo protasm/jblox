@@ -1,4 +1,4 @@
-package jblox.vm;
+package vm;
 
 public class BoundMethod {
   private Object receiver;

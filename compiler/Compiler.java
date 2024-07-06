@@ -1,23 +1,23 @@
-package jblox.compiler;
+package compiler;
 
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import jblox.debug.Debugger;
-import jblox.main.Props;
-import jblox.main.PropsObserver;
-import jblox.parser.ParseRule;
-import jblox.parser.Parser;
-import jblox.parser.parselet.*;
-import jblox.scanner.Scanner;
-import jblox.scanner.Token;
-import jblox.scanner.TokenType;
+import debug.Debugger;
+import main.Props;
+import main.PropsObserver;
+import parser.ParseRule;
+import parser.Parser;
+import parser.parselet.*;
+import scanner.Scanner;
+import scanner.Token;
+import scanner.TokenType;
 
-import static jblox.compiler.CompilerLocals.FunctionType.*;
-import static jblox.compiler.OpCode.*;
-import static jblox.parser.Parser.Precedence.*;
-import static jblox.scanner.TokenType.*;
+import static compiler.CompilerLocals.FunctionType.*;
+import static compiler.OpCode.*;
+import static parser.Parser.Precedence.*;
+import static scanner.TokenType.*;
 
 public class Compiler extends PropsObserver {
   private Scanner scanner;

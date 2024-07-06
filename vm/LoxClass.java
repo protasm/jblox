@@ -1,4 +1,4 @@
-package jblox.vm;
+package vm;
 
 import java.util.HashMap;
 import java.util.Map;

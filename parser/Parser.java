@@ -1,6 +1,6 @@
-package jblox.parser;
+package parser;
 
-import jblox.scanner.Token;
+import scanner.Token;
 
 public class Parser {
   public static final class Precedence {

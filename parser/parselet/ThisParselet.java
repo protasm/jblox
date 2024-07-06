@@ -1,10 +1,10 @@
-package jblox.parser.parselet;
+package parser.parselet;
 
-import jblox.compiler.Compiler;
+import compiler.Compiler;
 
 public class ThisParselet implements Parselet {
-  //parse(jblox.compiler.Compiler, boolean)
-  public void parse(jblox.compiler.Compiler compiler, boolean canAssign) {
+  //parse(compiler.Compiler, boolean)
+  public void parse(compiler.Compiler compiler, boolean canAssign) {
     if (compiler.currentClass() == null) {
       compiler.error("Can't use 'this' outside of a class.");
 

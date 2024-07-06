@@ -1,6 +1,6 @@
-package jblox.nativefn;
+package nativefn;
 
-import jblox.compiler.HasArity;
+import compiler.HasArity;
 
 public abstract class NativeFn implements HasArity {
   protected int arity = 0;

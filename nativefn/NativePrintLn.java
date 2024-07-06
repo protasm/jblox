@@ -1,4 +1,4 @@
-package jblox.nativefn;
+package nativefn;
 
 public class NativePrintLn extends NativeFn {
   //NativePrintLn()

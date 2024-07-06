@@ -1,4 +1,4 @@
-package jblox.nativefn;
+package nativefn;
 
 public class NativeClock extends NativeFn {
   //execute(Object[])

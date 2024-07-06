@@ -1,15 +1,15 @@
-package jblox.parser.parselet;
+package parser.parselet;
 
-import jblox.compiler.Compiler;
-import jblox.scanner.TokenType;
+import compiler.Compiler;
+import scanner.TokenType;
 
-import static jblox.compiler.OpCode.*;
-import static jblox.parser.Parser.Precedence.*;
-import static jblox.scanner.TokenType.*;
+import static compiler.OpCode.*;
+import static parser.Parser.Precedence.*;
+import static scanner.TokenType.*;
 
 public class UnaryParselet implements Parselet {
-  //parse(jblox.compiler.Compiler, boolean)
-  public void parse(jblox.compiler.Compiler compiler, boolean canAssign) {
+  //parse(compiler.Compiler, boolean)
+  public void parse(compiler.Compiler compiler, boolean canAssign) {
     TokenType operatorType = compiler.parser().previous().type();
 
     // Compile the operand.

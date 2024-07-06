@@ -1,16 +1,16 @@
-package jblox.debug;
+package debug;
 
 import java.util.Arrays;
 import java.util.Map;
 
-import jblox.compiler.Chunk;
-import jblox.compiler.Function;
-import jblox.compiler.CompilerLocals;
-import jblox.main.Props;
-import jblox.main.PropsObserver;
-import jblox.vm.CallFrame;
+import compiler.Chunk;
+import compiler.Function;
+import compiler.CompilerLocals;
+import main.Props;
+import main.PropsObserver;
+import vm.CallFrame;
 
-import static jblox.compiler.OpCode.*;
+import static compiler.OpCode.*;
 
 public class Debugger extends PropsObserver {
   //Cached properties

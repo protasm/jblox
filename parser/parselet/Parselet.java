@@ -1,8 +1,8 @@
-package jblox.parser.parselet;
+package parser.parselet;
 
-import jblox.compiler.Compiler;
+import compiler.Compiler;
 
 public interface Parselet {
-  //parse(jblox.compiler.Compiler, boolean);
-  void parse(jblox.compiler.Compiler compiler, boolean canAssign);
+  //parse(compiler.Compiler, boolean);
+  void parse(compiler.Compiler compiler, boolean canAssign);
 }

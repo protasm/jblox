@@ -1,4 +1,4 @@
-package jblox.compiler;
+package compiler;
 
 public final class OpCode {
   public static final byte OP_CONSTANT      = 0x00;

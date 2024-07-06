@@ -1,4 +1,4 @@
-package jblox.compiler;
+package compiler;
 
 public class Chunk {
   private byte[] codes;

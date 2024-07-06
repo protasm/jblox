@@ -1,4 +1,4 @@
-package jblox.compiler;
+package compiler;
 
 public class CompilerClass {
   private CompilerClass enclosing;
