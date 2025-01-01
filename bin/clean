@@ -1,5 +1,5 @@
 #!/bin/bash
 
-DIR="$HOME/jblox"
+DIR="$HOME/git/jblox"
 
 find $DIR -name "*.class" -type f -delete

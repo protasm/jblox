@@ -20,7 +20,7 @@ public class JBLox {
 
   //JBLox()
   public JBLox() {
-    String propsFile = System.getProperty("user.home") + "/jblox/main/props";
+    String propsFile = System.getProperty("user.home") + "/git/jblox/main/props";
 
     properties = new Props(propsFile);
     debugger = new Debugger(properties);
